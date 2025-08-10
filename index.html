@@ -6,23 +6,19 @@
     <title>Jurnal 7 Kebiasaan Anak Indonesia Hebat</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     
     <!-- Supabase SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <script type="module">
-        // -- PENTING: GANTI DENGAN DETAIL SUPABASE ANDA --
-        const supabaseUrl = 'https://owgdgidtoupnxhgfybzv.supabase.co'; // Tempel URL Proyek Supabase Anda di sini
-        const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93Z2RnaWR0b3VwbnhoZ2Z5Ynp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ4NDIwODcsImV4cCI6MjA3MDQxODA4N30.Q0d6spUFdk0fKs0Dpm5qCzYEv5p5aN8Khn7oK5mzkVA'; // Tempel kunci anon (publik) Supabase Anda di sini
+        // -- Kredensial Supabase Anda --
+        const supabaseUrl = 'https://owgdgidtoupnxhgfybzv.supabase.co';
+        const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93Z2RnaWR0b3VwbnhoZ2Z5Ynp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ4NDIwODcsImV4cCI6MjA3MDQxODA4N30.Q0d6spUFdk0fKs0Dpm5qCzYEv5p5aN8Khn7oK5mzkVA';
 
         // Inisialisasi Supabase
-        // Jika pengguna belum mengganti kunci placeholder, aplikasi akan menampilkan peringatan.
-        if (supabaseUrl === 'URL_SUPABASE_ANDA' || supabaseAnonKey === 'KUNCI_ANON_SUPABASE_ANDA') {
-            document.addEventListener('DOMContentLoaded', () => {
-                 showNotification("Harap konfigurasikan kunci API Supabase di file HTML untuk menghubungkan aplikasi.", true, 10000);
-            });
-        }
-        
         const { createClient } = window.supabase;
         const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
@@ -274,9 +270,17 @@
                         <h2 class="text-2xl font-bold text-gray-800">Dashboard Guru</h2>
                         <p class="text-gray-600">Data diperbarui secara real-time.</p>
                     </div>
-                    <button onclick="logout()" class="w-full mt-2 md:mt-0 md:w-auto bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition duration-300">
-                        Keluar
-                    </button>
+                    <div class="flex flex-wrap gap-2 mt-4 md:mt-0">
+                         <button onclick="exportToExcel()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition duration-300">
+                            📊 Export Excel
+                        </button>
+                        <button onclick="exportToPDF()" class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg transition duration-300">
+                            📄 Export PDF
+                        </button>
+                        <button onclick="logout()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition duration-300">
+                            Keluar
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="mb-6 bg-green-50 p-4 rounded-lg">
@@ -1006,6 +1010,112 @@
 
             modalBody.innerHTML = bodyHtml || '<p class="text-center">Tidak ada data jurnal dalam 7 hari terakhir.</p>';
         }
+        
+        async function exportToExcel() {
+            showNotification('Mempersiapkan file Excel...');
+            const { data: students, error: studentsError } = await window.supabase
+                .from('students')
+                .select('id, name')
+                .eq('class', currentUser.class);
+
+            if (studentsError) return showNotification('Gagal mengambil data siswa untuk ekspor.', true);
+
+            const { data: habits, error: habitsError } = await window.supabase
+                .from('habits')
+                .select('*')
+                .eq('class', currentUser.class)
+                .order('date', { ascending: false });
+
+            if (habitsError) return showNotification('Gagal mengambil data jurnal untuk ekspor.', true);
+            
+            const excelData = [];
+            const habitNames = HABITS.map(h => h.name);
+            excelData.push(['Nama Siswa', 'Kelas', 'Tanggal', ...habitNames, 'Total Skor', 'Catatan']);
+            
+            habits.forEach(habitData => {
+                const row = [
+                    habitData.studentName,
+                    habitData.class,
+                    new Date(habitData.date + 'T00:00:00').toLocaleDateString('id-ID'),
+                    ...habitData.habits.map(h => h ? 'Ya' : 'Tidak'),
+                    habitData.score,
+                    habitData.notes || '',
+                ];
+                excelData.push(row);
+            });
+            
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(excelData);
+            
+            ws['!cols'] = [ { wch: 20 }, { wch: 8 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 30 } ];
+            
+            XLSX.utils.book_append_sheet(wb, ws, `Kelas ${currentUser.class}`);
+            
+            const today = new Date().toISOString().split('T')[0];
+            const filename = `Jurnal_7_Kebiasaan_Kelas_${currentUser.class}_${today}.xlsx`;
+            
+            XLSX.writeFile(wb, filename);
+            showNotification('File Excel berhasil diunduh! 📊');
+        }
+
+        async function exportToPDF() {
+            showNotification('Mempersiapkan file PDF...');
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            const { data: students, error: studentsError } = await window.supabase
+                .from('students')
+                .select('*')
+                .eq('class', currentUser.class);
+            if (studentsError) return showNotification('Gagal mengambil data siswa untuk ekspor.', true);
+
+            const today = new Date().toISOString().split('T')[0];
+            const { data: habits, error: habitsError } = await window.supabase
+                .from('habits')
+                .select('*')
+                .eq('class', currentUser.class)
+                .eq('date', today);
+            if (habitsError) return showNotification('Gagal mengambil data jurnal untuk ekspor.', true);
+
+            doc.setFontSize(16);
+            doc.text('Laporan Jurnal 7 Kebiasaan Anak Hebat', 20, 20);
+            
+            doc.setFontSize(12);
+            doc.text(`Kelas: ${currentUser.class}`, 20, 30);
+            doc.text(`Guru: ${currentUser.name}`, 20, 40);
+            doc.text(`Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}`, 20, 50);
+            
+            const tableData = [];
+            const habitNames = ['BP', 'IB', 'OR', 'MS', 'BL', 'BM', 'TC'];
+            
+            students.sort((a,b) => a.name.localeCompare(b.name)).forEach(student => {
+                const habitData = habits.find(h => h.studentId === student.id);
+                const score = habitData ? habitData.score : 0;
+                const habitChecks = habitData ? habitData.habits.map(h => h ? '✅' : '❌') : Array(7).fill('❌');
+                tableData.push([ student.name, ...habitChecks, `${score}/7` ]);
+            });
+            
+            doc.autoTable({
+                head: [['Nama Siswa', ...habitNames, 'Skor']],
+                body: tableData,
+                startY: 60,
+                styles: { fontSize: 8 },
+                headStyles: { fillColor: [34, 197, 94] },
+                columnStyles: { 0: { cellWidth: 40 }, 8: { cellWidth: 20 } }
+            });
+            
+            const finalY = doc.lastAutoTable.finalY + 10;
+            doc.setFontSize(10);
+            doc.text('Keterangan:', 20, finalY);
+            doc.text('BP: Bangun Pagi, IB: Beribadah, OR: Berolahraga, MS: Makan Sehat', 20, finalY + 7);
+            doc.text('BL: Gemar Belajar, BM: Bermasyarakat, TC: Tidur Cepat', 20, finalY + 14);
+            
+            const todayStr = new Date().toISOString().split('T')[0];
+            const filename = `Laporan_Jurnal_Harian_Kelas_${currentUser.class}_${todayStr}.pdf`;
+            
+            doc.save(filename);
+            showNotification('File PDF berhasil diunduh! 📄');
+        }
 
         // --- FUNGSI UTILITAS ---
         function getStartOfWeek(d) {
@@ -1026,6 +1136,8 @@
         window.viewStudentDetail = viewStudentDetail;
         window.closeModal = closeModal;
         window.copyCode = copyCode;
+        window.exportToExcel = exportToExcel;
+        window.exportToPDF = exportToPDF;
 
     </script>
 </body>
