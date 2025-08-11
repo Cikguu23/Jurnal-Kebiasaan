@@ -604,3 +604,481 @@
         const habits = [
             'Bangun Pagi', 'Beribadah', 'Berolahraga', 'Makan Sehat',
             'Gemar Belajar', 'Bermasyarakat', 'Tidur Cepat'
+        ];
+        
+        let currentStudent = null;
+        let currentTeacher = null;
+        
+        const db = window.supabase;
+        
+        // Elemen UI
+        const loginSection = document.getElementById('loginSection');
+        const studentLoginForm = document.getElementById('studentLoginForm');
+        const teacherLoginForm = document.getElementById('teacherLoginForm');
+        const homepageDashboard = document.getElementById('homepageDashboard');
+        const habitsDisplay = document.getElementById('habitsDisplay');
+        const studentDashboard = document.getElementById('studentDashboard');
+        const teacherDashboard = document.getElementById('teacherDashboard');
+        const loadingSpinner = document.querySelector('.loading-spinner');
+        const syncIndicator = document.getElementById('syncIndicator');
+
+        // Initial check on load
+        document.addEventListener('DOMContentLoaded', () => {
+            checkLoginState();
+            fetchHomepageStats();
+            document.getElementById('currentDate').textContent = new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        });
+
+        // Tampilkan/sembunyikan bagian UI
+        function showSection(sectionId) {
+            const sections = [loginSection, studentLoginForm, teacherLoginForm, homepageDashboard, habitsDisplay, studentDashboard, teacherDashboard];
+            sections.forEach(section => {
+                if (section.id === sectionId) {
+                    section.classList.remove('hidden');
+                } else {
+                    section.classList.add('hidden');
+                }
+            });
+        }
+
+        function showStudentLogin() {
+            showSection('studentLoginForm');
+            homepageDashboard.classList.add('hidden');
+        }
+
+        function showTeacherLogin() {
+            showSection('teacherLoginForm');
+            homepageDashboard.classList.add('hidden');
+        }
+
+        function backToMain() {
+            showSection('homepageDashboard');
+            showSection('habitsDisplay');
+            habitsDisplay.classList.remove('hidden');
+            loginSection.classList.remove('hidden');
+        }
+
+        async function fetchHomepageStats() {
+            try {
+                const { count: studentsCount } = await db.from('students').select('*', { count: 'exact' });
+                const { count: journalCount } = await db.from('journal_entries').select('*', { count: 'exact' });
+                const { count: medalCount } = await db.from('medals').select('*', { count: 'exact' });
+                
+                document.getElementById('totalRegisteredStudents').textContent = studentsCount || 0;
+                document.getElementById('totalJournalEntries').textContent = journalCount || 0;
+                document.getElementById('totalMedalsEarned').textContent = medalCount || 0;
+                
+                const { data: topPerformers, error: topError } = await db
+                    .from('journal_entries')
+                    .select('student_name, student_class, score')
+                    .limit(3)
+                    .order('created_at', { ascending: false });
+
+                if (topError) {
+                    console.error('Error fetching top performers:', topError);
+                    return;
+                }
+
+                const topPerformersContainer = document.getElementById('topPerformers');
+                topPerformersContainer.innerHTML = '';
+                if (topPerformers && topPerformers.length > 0) {
+                    topPerformers.forEach(performer => {
+                        topPerformersContainer.innerHTML += `
+                            <div class="flex items-center p-4 bg-gray-100 rounded-xl shadow-md">
+                                <span class="text-3xl mr-4">🏅</span>
+                                <div>
+                                    <p class="font-bold text-gray-800">${performer.student_name}</p>
+                                    <p class="text-sm text-gray-600">Kelas ${performer.student_class} | Skor: ${performer.score}</p>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+            } catch (error) {
+                console.error('Error fetching homepage stats:', error);
+            }
+        }
+        
+        async function checkLoginState() {
+            const student = await localforage.getItem('currentStudent');
+            const teacher = await localforage.getItem('currentTeacher');
+            
+            if (student) {
+                currentStudent = student;
+                showStudentDashboard();
+            } else if (teacher) {
+                currentTeacher = teacher;
+                showTeacherDashboard();
+            } else {
+                showSection('homepageDashboard');
+                habitsDisplay.classList.remove('hidden');
+                loginSection.classList.remove('hidden');
+            }
+        }
+
+        async function studentLogin(event) {
+            event.preventDefault();
+            
+            const studentName = document.getElementById('studentName').value.trim();
+            const studentClass = document.getElementById('studentClass').value;
+            
+            const { data, error } = await db.from('students').select('*').eq('student_name', studentName).eq('student_class', studentClass);
+            
+            if (error) {
+                console.error('Error during student login:', error);
+                alert('Terjadi kesalahan saat login.');
+                return;
+            }
+
+            if (data.length > 0) {
+                currentStudent = data[0];
+                await localforage.setItem('currentStudent', currentStudent);
+                alert('Login berhasil!');
+                showStudentDashboard();
+            } else {
+                const { data: newData, error: newError } = await db.from('students').insert([{
+                    student_name: studentName,
+                    student_class: studentClass
+                }]).select();
+
+                if (newError) {
+                    console.error('Error registering new student:', newError);
+                    alert('Gagal mendaftarkan siswa baru.');
+                    return;
+                }
+                currentStudent = newData[0];
+                await localforage.setItem('currentStudent', currentStudent);
+                alert('Siswa baru berhasil didaftarkan dan login!');
+                showStudentDashboard();
+            }
+        }
+
+        async function teacherLogin(event) {
+            event.preventDefault();
+            const teacherName = document.getElementById('teacherName').value.trim();
+            const teacherPassword = document.getElementById('teacherPassword').value.trim();
+            const teacherClass = document.getElementById('teacherClass').value;
+            
+            // Logika login guru (hardcoded atau dari DB 'teachers')
+            if (teacherName === 'admin' && teacherPassword === 'password123' && teacherClass) {
+                currentTeacher = { teacher_name: teacherName, teacher_class: teacherClass };
+                await localforage.setItem('currentTeacher', currentTeacher);
+                alert('Login guru berhasil!');
+                showTeacherDashboard();
+            } else {
+                alert('Nama pengguna, password, atau kelas salah.');
+            }
+        }
+
+        function logout() {
+            localforage.clear().then(() => {
+                currentStudent = null;
+                currentTeacher = null;
+                alert('Anda telah keluar.');
+                window.location.reload();
+            });
+        }
+
+        async function showStudentDashboard() {
+            showSection('studentDashboard');
+            document.getElementById('currentStudentName').textContent = currentStudent.student_name;
+            document.getElementById('currentStudentClass').textContent = currentStudent.student_class;
+            await fetchStudentData();
+        }
+
+        async function fetchStudentData() {
+            const today = new Date().toISOString().split('T')[0];
+            const { data: journalEntries, error } = await db
+                .from('journal_entries')
+                .select('*')
+                .eq('student_id', currentStudent.id)
+                .order('created_at', { ascending: false });
+            
+            if (error) {
+                console.error('Error fetching journal entries:', error);
+                return;
+            }
+
+            // Tampilkan riwayat
+            const historyContainer = document.getElementById('studentHistory');
+            historyContainer.innerHTML = '';
+            if (journalEntries.length > 0) {
+                journalEntries.forEach(entry => {
+                    historyContainer.innerHTML += `
+                        <div class="bg-gray-100 p-4 rounded-lg">
+                            <p class="font-semibold">${new Date(entry.created_at).toLocaleDateString()}</p>
+                            <p>Skor: ${entry.score} / 7</p>
+                            <p class="text-sm text-gray-600">${entry.additional_notes || ''}</p>
+                        </div>
+                    `;
+                });
+            } else {
+                historyContainer.innerHTML = '<p class="text-gray-500">Belum ada riwayat jurnal.</p>';
+            }
+
+            // Hitung progres mingguan dan medali
+            const oneWeekAgo = new Date();
+            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+            const weeklyEntries = journalEntries.filter(entry => new Date(entry.created_at) >= oneWeekAgo);
+            const totalScore = weeklyEntries.reduce((sum, entry) => sum + entry.score, 0);
+            const maxScore = weeklyEntries.length * 7;
+            const progress = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
+            
+            document.getElementById('progressBar').style.width = `${progress}%`;
+            document.getElementById('weeklyProgress').textContent = `${progress}%`;
+
+            // Cek medali
+            const { data: medals, error: medalError } = await db.from('medals').select('*').eq('student_id', currentStudent.id);
+            if (medalError) {
+                console.error('Error fetching medals:', medalError);
+                return;
+            }
+            
+            const medalsContainer = document.getElementById('studentMedals');
+            medalsContainer.innerHTML = '';
+            if (medals.length > 0) {
+                medals.forEach(medal => {
+                    medalsContainer.innerHTML += `
+                        <div class="bg-yellow-100 p-4 rounded-lg text-center">
+                            <span class="text-3xl medal">${medal.emoji}</span>
+                            <p class="font-semibold mt-2">${medal.name}</p>
+                        </div>
+                    `;
+                });
+            } else {
+                medalsContainer.innerHTML = '<p class="col-span-full text-center text-gray-500">Belum ada medali.</p>';
+            }
+        }
+        
+        async function saveHabits(event) {
+            event.preventDefault();
+            loadingSpinner.classList.remove('hidden');
+            
+            const today = new Date().toISOString().split('T')[0];
+            const habitsForm = document.getElementById('habitsForm');
+            const formData = new FormData(habitsForm);
+
+            const habits = {
+                bangun_pagi: document.getElementById('habit1').checked,
+                beribadah: document.getElementById('habit2').checked,
+                berolahraga: document.getElementById('habit3').checked,
+                makan_sehat: document.getElementById('habit4').checked,
+                gemar_belajar: document.getElementById('habit5').checked,
+                bermasyarakat: document.getElementById('habit6').checked,
+                tidur_cepat: document.getElementById('habit7').checked,
+                wake_time: document.getElementById('wakeTime').value,
+                worship_details: document.getElementById('worshipDetail').value,
+                prayers: Array.from(document.querySelectorAll('.prayer-check:checked')).map(el => el.dataset.prayer),
+                exercise_type: document.getElementById('exerciseType').value,
+                healthy_food: document.getElementById('healthyFood').value,
+                study_subject: document.getElementById('studySubject').value,
+                social_activity: document.getElementById('socialActivity').value,
+                sleep_time: document.getElementById('sleepTime').value,
+                additional_notes: document.getElementById('additionalNotes').value
+            };
+            
+            let score = 0;
+            if (habits.bangun_pagi) score++;
+            if (habits.beribadah) score++;
+            if (habits.berolahraga) score++;
+            if (habits.makan_sehat) score++;
+            if (habits.gemar_belajar) score++;
+            if (habits.bermasyarakat) score++;
+            if (habits.tidur_cepat) score++;
+            
+            // Simpan data ke Supabase
+            const { error: saveError } = await db.from('journal_entries').upsert([{
+                student_id: currentStudent.id,
+                student_name: currentStudent.student_name,
+                student_class: currentStudent.student_class,
+                entry_date: today,
+                score: score,
+                ...habits,
+                // tambahkan kolom lain jika ada
+            }], { onConflict: 'student_id, entry_date' });
+            
+            loadingSpinner.classList.add('hidden');
+            
+            if (saveError) {
+                console.error('Error saving data:', saveError);
+                alert('Gagal menyimpan data. Coba lagi.');
+            } else {
+                alert('Jurnal berhasil disimpan!');
+                habitsForm.reset();
+                fetchStudentData(); // Refresh data student
+            }
+        }
+        
+        async function showTeacherDashboard() {
+            showSection('teacherDashboard');
+            document.getElementById('currentTeacherName').textContent = currentTeacher.teacher_name;
+            document.getElementById('currentTeacherClass').textContent = currentTeacher.teacher_class;
+            await fetchTeacherData();
+        }
+
+        let teacherStudentData = [];
+        let habitChartInstance = null;
+
+        async function fetchTeacherData() {
+            const { data: students, error: studentError } = await db
+                .from('students')
+                .select('*')
+                .eq('student_class', currentTeacher.teacher_class);
+            
+            if (studentError) {
+                console.error('Error fetching students:', studentError);
+                return;
+            }
+
+            document.getElementById('totalStudents').textContent = students.length;
+
+            const { data: journalEntries, error: journalError } = await db
+                .from('journal_entries')
+                .select('*')
+                .eq('student_class', currentTeacher.teacher_class);
+            
+            if (journalError) {
+                console.error('Error fetching journal entries:', journalError);
+                return;
+            }
+
+            teacherStudentData = students.map(student => {
+                const studentEntries = journalEntries.filter(entry => entry.student_id === student.id);
+                const totalScore = studentEntries.reduce((sum, entry) => sum + entry.score, 0);
+                const todayEntry = studentEntries.find(entry => entry.entry_date === new Date().toISOString().split('T')[0]);
+                return {
+                    ...student,
+                    total_score: totalScore,
+                    journal_count: studentEntries.length,
+                    active_today: !!todayEntry,
+                };
+            });
+            
+            renderStudentTable();
+            renderAverageHabitChart(journalEntries);
+            updateTeacherStats(teacherStudentData);
+        }
+        
+        function updateTeacherStats(data) {
+            const today = new Date().toISOString().split('T')[0];
+            const activeTodayCount = data.filter(s => s.active_today).length;
+            const totalScoreSum = data.reduce((sum, s) => sum + s.total_score, 0);
+            const averageScore = data.length > 0 ? (totalScoreSum / data.length).toFixed(2) : 0;
+            const topStudent = data.sort((a, b) => b.total_score - a.total_score)[0];
+            
+            document.getElementById('activeToday').textContent = activeTodayCount;
+            document.getElementById('averageScore').textContent = averageScore;
+            document.getElementById('topStudentName').textContent = topStudent ? topStudent.student_name : 'N/A';
+        }
+        
+        function renderStudentTable() {
+            const tableBody = document.getElementById('studentTableBody');
+            tableBody.innerHTML = '';
+            teacherStudentData.forEach(student => {
+                tableBody.innerHTML += `
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap">${student.student_name}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${student.student_class}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${student.journal_count}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">${student.total_score}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <button onclick="viewStudentDetail('${student.id}')" class="text-indigo-600 hover:text-indigo-900">Lihat Detail</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+        
+        function renderAverageHabitChart(journalEntries) {
+            if (habitChartInstance) {
+                habitChartInstance.destroy();
+            }
+
+            const habitScores = {
+                'Bangun Pagi': [], 'Beribadah': [], 'Berolahraga': [], 'Makan Sehat': [],
+                'Gemar Belajar': [], 'Bermasyarakat': [], 'Tidur Cepat': []
+            };
+
+            journalEntries.forEach(entry => {
+                if (entry.bangun_pagi) habitScores['Bangun Pagi'].push(1);
+                if (entry.beribadah) habitScores['Beribadah'].push(1);
+                if (entry.berolahraga) habitScores['Berolahraga'].push(1);
+                if (entry.makan_sehat) habitScores['Makan Sehat'].push(1);
+                if (entry.gemar_belajar) habitScores['Gemar Belajar'].push(1);
+                if (entry.bermasyarakat) habitScores['Bermasyarakat'].push(1);
+                if (entry.tidur_cepat) habitScores['Tidur Cepat'].push(1);
+            });
+
+            const labels = Object.keys(habitScores);
+            const data = labels.map(label => {
+                const total = habitScores[label].length;
+                return total > 0 ? (total / journalEntries.length * 100).toFixed(2) : 0;
+            });
+
+            const ctx = document.getElementById('averageHabitChart').getContext('2d');
+            habitChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Persentase Pengisian Jurnal (%)',
+                        data: data,
+                        backgroundColor: [
+                            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#E7E9ED'
+                        ],
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                        }
+                    }
+                }
+            });
+        }
+        
+        function refreshTeacherData() {
+            fetchTeacherData();
+            alert('Data telah diperbarui.');
+        }
+
+        async function exportToExcel() {
+            const worksheet = XLSX.utils.json_to_sheet(teacherStudentData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Data Siswa");
+            XLSX.writeFile(workbook, "Data_Siswa_Kelas_" + currentTeacher.teacher_class + ".xlsx");
+        }
+
+        async function exportToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.text(`Data Siswa Kelas ${currentTeacher.teacher_class}`, 14, 20);
+
+            const tableData = teacherStudentData.map(student => [
+                student.student_name,
+                student.student_class,
+                student.journal_count,
+                student.total_score
+            ]);
+
+            doc.autoTable({
+                head: [['Nama Siswa', 'Kelas', 'Jurnal Terisi', 'Skor Total']],
+                body: tableData,
+                startY: 30,
+            });
+
+            doc.save(`Data_Siswa_Kelas_${currentTeacher.teacher_class}.pdf`);
+        }
+
+        // Dummy function for view student detail
+        function viewStudentDetail(studentId) {
+            alert(`Melihat detail siswa dengan ID: ${studentId}`);
+            // Tambahkan logika untuk menampilkan detail siswa
+        }
+    </script>
+
+</body>
+</html>
