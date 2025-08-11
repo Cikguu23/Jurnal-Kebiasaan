@@ -11,25 +11,25 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     
     <!-- Supabase SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <script type="module">
-        // -- Kredensial Supabase Anda --
-        const supabaseUrl = 'https://owgdgidtoupnxhgfybzv.supabase.co';
-        const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93Z2RnaWR0b3VwbnhoZ2Z5Ynp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ4NDIwODcsImV4cCI6MjA3MDQxODA4N30.Q0d6spUFdk0fKs0Dpm5qCzYEv5p5aN8Khn7oK5mzkVA';
-
-        // Inisialisasi Supabase
-        const { createClient } = window.supabase;
-        const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-        // Membuat klien Supabase tersedia secara global
-        window.supabase = supabase;
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script>
+        // Supabase configuration
+        const SUPABASE_URL = 'https://owgdgidtoupnxhgfybzv.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93Z2RnaWR0b3VwbnhoZ2Z5Ynp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ4NDIwODcsImV4cCI6MjA3MDQxODA4N30.Q0d6spUFdk0fKs0Dpm5qCzYEv5p5aN8Khn7oK5mzkVA';
+        
+        // Initialize Supabase
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // Make Supabase available globally
+        window.supabaseClient = supabase;
+        
+        console.log('Supabase initialized successfully');
     </script>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
         
-        body {
+        * {
             font-family: 'Poppins', sans-serif;
         }
         
@@ -64,16 +64,55 @@
         }
         
         .notification {
-            animation: slideIn 0.5s ease, fadeOut 0.5s ease 3.5s forwards;
+            animation: slideIn 0.5s ease;
         }
         
         @keyframes slideIn {
             from { transform: translateX(100%); }
             to { transform: translateX(0); }
         }
-        @keyframes fadeOut {
-            from { opacity: 1; }
-            to { opacity: 0; transform: translateX(100%); }
+        
+        .medal {
+            animation: bounce 2s infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+        
+        .sync-indicator {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 1000;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .sync-online {
+            background: #10b981;
+            color: white;
+        }
+        
+        .sync-offline {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .sync-syncing {
+            background: #f59e0b;
+            color: white;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
         }
         
         .loading-spinner {
@@ -91,35 +130,56 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-
-        /* Gaya Modal */
-        .modal {
-            transition: opacity 0.3s ease;
+        
+        .animated-title {
+            background: linear-gradient(-45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4, #ffeaa7, #dda0dd);
+            background-size: 400% 400%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradientShift 3s ease-in-out infinite;
+            display: inline-block;
         }
-        .modal-content {
-            transition: transform 0.3s ease;
+        
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        
+        .animation-delay-300 {
+            animation-delay: 0.3s;
         }
     </style>
 </head>
 <body class="gradient-bg min-h-screen">
+    <!-- Sync Status Indicator -->
+    <div id="syncIndicator" class="sync-indicator sync-offline">
+        🔄 Menyinkronkan...
+    </div>
+
     <!-- Header -->
-    <header class="bg-white/10 backdrop-blur-md shadow-lg sticky top-0 z-40">
+    <header class="bg-white/10 backdrop-blur-md shadow-lg">
         <div class="container mx-auto px-4 py-3 flex justify-between items-center">
             <div class="flex items-center space-x-4">
-                 <img src="https://iili.io/FLZp1qP.md.png" alt="Logo Kiri" class="h-12 w-auto" onerror="this.onerror=null;this.src='https://placehold.co/50x50/FFFFFF/000000?text=Logo';">
+                <img src="https://iili.io/FLZp1qP.md.png" alt="Logo Kiri" class="h-12 w-auto">
             </div>
-            <h1 class="text-white text-lg md:text-xl font-bold text-center flex-1">Jurnal 7 Kebiasaan Anak Hebat</h1>
-            <img src="https://iili.io/FLmkjSI.png" alt="Logo Sekolah" class="h-12 w-auto" onerror="this.onerror=null;this.src='https://placehold.co/50x50/FFFFFF/000000?text=Logo';">
+            <h1 class="text-white text-xl font-bold text-center flex-1 animate-pulse">
+                <span class="inline-block animate-bounce">📚</span>
+                <span class="animated-title">Jurnal 7 Kebiasaan Anak Indonesia Hebat</span>
+                <span class="inline-block animate-bounce animation-delay-300">🌟</span>
+            </h1>
+            <img src="https://iili.io/FLmkjSI.png" alt="Logo Sekolah" class="h-12 w-auto">
         </div>
     </header>
 
-    <!-- Kontainer Utama -->
+    <!-- Main Container -->
     <div class="container mx-auto px-4 py-8">
-        <!-- Bagian Login -->
-        <div id="loginSection" class="max-w-md mx-auto bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-8 mb-8">
+        <!-- Login Section -->
+        <div id="loginSection" class="hidden max-w-md mx-auto bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-8 mb-8">
             <div class="text-center mb-6">
                 <h2 class="text-2xl font-bold text-gray-800 mb-2">Masuk ke Jurnal</h2>
                 <p class="text-gray-600">Pilih peran Anda untuk melanjutkan</p>
+
             </div>
             
             <div class="space-y-4">
@@ -132,7 +192,7 @@
             </div>
         </div>
 
-        <!-- Formulir Login Siswa -->
+        <!-- Student Login Form -->
         <div id="studentLoginForm" class="hidden max-w-md mx-auto bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-8 mb-8">
             <h3 class="text-xl font-bold text-gray-800 mb-4 text-center">Login Siswa</h3>
             <form onsubmit="studentLogin(event)">
@@ -143,20 +203,31 @@
                 <div class="mb-4">
                     <label class="block text-gray-700 text-sm font-bold mb-2">Kelas</label>
                     <select id="studentClass" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500" required>
-                         <option value="">Pilih Kelas</option>
-                         <option value="1A">1A</option><option value="1B">1B</option><option value="1C">1C</option>
-                         <option value="2A">2A</option><option value="2B">2B</option><option value="2C">2C</option><option value="2D">2D</option>
-                         <option value="3A">3A</option><option value="3B">3B</option><option value="3C">3C</option><option value="3D">3D</option>
-                         <option value="4A">4A</option><option value="4B">4B</option><option value="4C">4C</option><option value="4D">4D</option>
-                         <option value="5A">5A</option><option value="5B">5B</option><option value="5C">5C</option>
-                         <option value="6A">6A</option><option value="6B">6B</option><option value="6C">6C</option>
+                        <option value="">Pilih Kelas</option>
+                        <option value="1A">1A</option>
+                        <option value="1B">1B</option>
+                        <option value="1C">1C</option>
+                        <option value="2A">2A</option>
+                        <option value="2B">2B</option>
+                        <option value="2C">2C</option>
+                        <option value="2D">2D</option>
+                        <option value="3A">3A</option>
+                        <option value="3B">3B</option>
+                        <option value="3C">3C</option>
+                        <option value="3D">3D</option>
+                        <option value="4A">4A</option>
+                        <option value="4B">4B</option>
+                        <option value="4C">4C</option>
+                        <option value="4D">4D</option>
+                        <option value="5A">5A</option>
+                        <option value="5B">5B</option>
+                        <option value="5C">5C</option>
+                        <option value="6A">6A</option>
+                        <option value="6B">6B</option>
+                        <option value="6C">6C</option>
                     </select>
                 </div>
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2">Kode Unik Siswa (opsional)</label>
-                    <input type="text" id="studentCode" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500" placeholder="Untuk sinkronisasi antar perangkat">
-                    <p class="text-xs text-gray-500 mt-1">Jika sudah pernah login, masukkan kode unik yang sama.</p>
-                </div>
+
                 <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-300">
                     <span class="loading-spinner hidden"></span>
                     Masuk
@@ -167,7 +238,7 @@
             </form>
         </div>
 
-        <!-- Formulir Login Guru -->
+        <!-- Teacher Login Form -->
         <div id="teacherLoginForm" class="hidden max-w-md mx-auto bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-8 mb-8">
             <h3 class="text-xl font-bold text-gray-800 mb-4 text-center">Login Guru</h3>
             <form onsubmit="teacherLogin(event)">
@@ -183,12 +254,27 @@
                     <label class="block text-gray-700 text-sm font-bold mb-2">Kelas yang Diampu</label>
                     <select id="teacherClass" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-green-500" required>
                         <option value="">Pilih Kelas</option>
-                         <option value="1A">1A</option><option value="1B">1B</option><option value="1C">1C</option>
-                         <option value="2A">2A</option><option value="2B">2B</option><option value="2C">2C</option><option value="2D">2D</option>
-                         <option value="3A">3A</option><option value="3B">3B</option><option value="3C">3C</option><option value="3D">3D</option>
-                         <option value="4A">4A</option><option value="4B">4B</option><option value="4C">4C</option><option value="4D">4D</option>
-                         <option value="5A">5A</option><option value="5B">5B</option><option value="5C">5C</option>
-                         <option value="6A">6A</option><option value="6B">6B</option><option value="6C">6C</option>
+                        <option value="1A">1A</option>
+                        <option value="1B">1B</option>
+                        <option value="1C">1C</option>
+                        <option value="2A">2A</option>
+                        <option value="2B">2B</option>
+                        <option value="2C">2C</option>
+                        <option value="2D">2D</option>
+                        <option value="3A">3A</option>
+                        <option value="3B">3B</option>
+                        <option value="3C">3C</option>
+                        <option value="3D">3D</option>
+                        <option value="4A">4A</option>
+                        <option value="4B">4B</option>
+                        <option value="4C">4C</option>
+                        <option value="4D">4D</option>
+                        <option value="5A">5A</option>
+                        <option value="5B">5B</option>
+                        <option value="5C">5C</option>
+                        <option value="6A">6A</option>
+                        <option value="6B">6B</option>
+                        <option value="6C">6C</option>
                     </select>
                 </div>
                 <button type="submit" class="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-300">
@@ -201,26 +287,136 @@
             </form>
         </div>
 
-        <!-- Tampilan 7 Kebiasaan -->
-        <div id="habitsDisplay" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <!-- Kartu kebiasaan dibuat secara dinamis -->
-        </div>
-
-        <!-- Dasbor Siswa -->
-        <div id="studentDashboard" class="hidden">
-            <div class="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-6 md:p-8 mb-8">
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-2 md:mb-0">Dashboard Siswa</h2>
-                    <button onclick="logout()" class="w-full md:w-auto bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition duration-300">
-                        Keluar
-                    </button>
+        <!-- Homepage Dashboard -->
+        <div id="homepageDashboard" class="mb-8">
+            <!-- Welcome Section -->
+            <div class="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-8 mb-8 text-center">
+                <h2 class="text-3xl font-bold text-gray-800 mb-4">Selamat Datang di Jurnal 7 Kebiasaan</h2>
+                <p class="text-lg text-gray-600 mb-6">Membangun karakter anak Indonesia yang hebat melalui kebiasaan positif sehari-hari</p>
+                
+                <!-- Statistics Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-gradient-to-br from-blue-400 to-blue-600 text-white p-6 rounded-xl shadow-lg">
+                        <div class="text-4xl mb-2">👥</div>
+                        <h3 class="text-2xl font-bold" id="totalRegisteredStudents">0</h3>
+                        <p class="text-blue-100">Total Siswa Terdaftar</p>
+                    </div>
+                    
+                    <div class="bg-gradient-to-br from-green-400 to-green-600 text-white p-6 rounded-xl shadow-lg">
+                        <div class="text-4xl mb-2">📝</div>
+                        <h3 class="text-2xl font-bold" id="totalJournalEntries">0</h3>
+                        <p class="text-green-100">Total Jurnal Terisi</p>
+                    </div>
+                    
+                    <div class="bg-gradient-to-br from-purple-400 to-purple-600 text-white p-6 rounded-xl shadow-lg">
+                        <div class="text-4xl mb-2">🏆</div>
+                        <h3 class="text-2xl font-bold" id="totalMedalsEarned">0</h3>
+                        <p class="text-purple-100">Total Medali Diraih</p>
+                    </div>
                 </div>
                 
-                <div class="mb-6 bg-blue-50 p-4 rounded-lg">
+                <!-- Quick Actions -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <button onclick="showStudentLogin()" class="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold py-4 px-8 rounded-xl transition duration-300 transform hover:scale-105 shadow-lg">
+                        <div class="text-3xl mb-2">🎓</div>
+                        <div class="text-lg">Masuk sebagai Siswa</div>
+                        <div class="text-sm opacity-90">Isi jurnal harian Anda</div>
+                    </button>
+                    
+                    <button onclick="showTeacherLogin()" class="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold py-4 px-8 rounded-xl transition duration-300 transform hover:scale-105 shadow-lg">
+                        <div class="text-3xl mb-2">👨‍🏫</div>
+                        <div class="text-lg">Masuk sebagai Guru</div>
+                        <div class="text-sm opacity-90">Pantau progress siswa</div>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Top Performers -->
+            <div class="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-8 mb-8">
+                <h3 class="text-2xl font-bold text-gray-800 mb-6 text-center">🌟 Siswa Berprestasi Minggu Ini</h3>
+                <div id="topPerformers" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Top performers will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 7 Habits Display -->
+        <div id="habitsDisplay" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="habit-card bg-white/90 backdrop-blur-md rounded-2xl p-6 text-center shadow-xl">
+                <div class="mb-4 flex justify-center">
+                    <img src="https://iili.io/FQAv9Qp.png" alt="Bangun Pagi" class="w-16 h-16 object-contain">
+                </div>
+                <h3 class="text-lg font-bold text-gray-800 mb-2">Bangun Pagi</h3>
+                <p class="text-sm text-gray-600">Mulai hari dengan semangat</p>
+            </div>
+            
+            <div class="habit-card bg-white/90 backdrop-blur-md rounded-2xl p-6 text-center shadow-xl">
+                <div class="mb-4 flex justify-center">
+                    <img src="https://iili.io/FQAgxRe.png" alt="Beribadah" class="w-16 h-16 object-contain">
+                </div>
+                <h3 class="text-lg font-bold text-gray-800 mb-2">Beribadah</h3>
+                <p class="text-sm text-gray-600">Mendekatkan diri kepada Allah</p>
+            </div>
+            
+            <div class="habit-card bg-white/90 backdrop-blur-md rounded-2xl p-6 text-center shadow-xl">
+                <div class="mb-4 flex justify-center">
+                    <img src="https://iili.io/FQAgvbs.png" alt="Berolahraga" class="w-16 h-16 object-contain">
+                </div>
+                <h3 class="text-lg font-bold text-gray-800 mb-2">Berolahraga</h3>
+                <p class="text-sm text-gray-600">Tubuh sehat jiwa kuat</p>
+            </div>
+            
+            <div class="habit-card bg-white/90 backdrop-blur-md rounded-2xl p-6 text-center shadow-xl">
+                <div class="mb-4 flex justify-center">
+                    <img src="https://iili.io/FQArT7t.png" alt="Makan Sehat" class="w-16 h-16 object-contain">
+                </div>
+                <h3 class="text-lg font-bold text-gray-800 mb-2">Makan Sehat</h3>
+                <p class="text-sm text-gray-600">Nutrisi untuk tumbuh kembang</p>
+            </div>
+            
+            <div class="habit-card bg-white/90 backdrop-blur-md rounded-2xl p-6 text-center shadow-xl">
+                <div class="mb-4 flex justify-center">
+                    <img src="https://iili.io/FQA4GPR.png" alt="Gemar Belajar" class="w-16 h-16 object-contain">
+                </div>
+                <h3 class="text-lg font-bold text-gray-800 mb-2">Gemar Belajar</h3>
+                <p class="text-sm text-gray-600">Ilmu adalah harta terbesar</p>
+            </div>
+            
+            <div class="habit-card bg-white/90 backdrop-blur-md rounded-2xl p-6 text-center shadow-xl">
+                <div class="mb-4 flex justify-center">
+                    <img src="https://iili.io/FQA4iNe.png" alt="Bermasyarakat" class="w-16 h-16 object-contain">
+                </div>
+                <h3 class="text-lg font-bold text-gray-800 mb-2">Bermasyarakat</h3>
+                <p class="text-sm text-gray-600">Berbagi kebaikan dengan sesama</p>
+            </div>
+            
+            <div class="habit-card bg-white/90 backdrop-blur-md rounded-2xl p-6 text-center shadow-xl">
+                <div class="mb-4 flex justify-center">
+                    <img src="https://iili.io/FQA6uxs.png" alt="Tidur Cepat" class="w-16 h-16 object-contain">
+                </div>
+                <h3 class="text-lg font-bold text-gray-800 mb-2">Tidur Cepat</h3>
+                <p class="text-sm text-gray-600">Istirahat yang cukup</p>
+            </div>
+        </div>
+
+        <!-- Student Dashboard -->
+        <div id="studentDashboard" class="hidden">
+            <div class="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-8 mb-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">Dashboard Siswa</h2>
+                    <div class="flex gap-2">
+                        <button onclick="syncData()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition duration-300">
+                            🔄 Sinkronkan
+                        </button>
+                        <button onclick="logout()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition duration-300">
+                            Keluar
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="mb-6">
                     <h3 class="text-lg font-semibold mb-2">Halo, <span id="currentStudentName"></span>!</h3>
                     <p class="text-gray-600">Kelas: <span id="currentStudentClass"></span></p>
-                    <p class="text-sm text-blue-600">Kode Unik Anda: <span id="currentStudentCode" class="font-mono bg-blue-100 px-2 py-1 rounded"></span> <button onclick="copyCode()" class="ml-2 text-xs">(Salin)</button></p>
-                     <p class="text-xs text-gray-500 mt-1">Simpan kode ini untuk login di perangkat lain.</p>
                 </div>
 
                 <!-- Progress Bar -->
@@ -234,48 +430,149 @@
                     </div>
                 </div>
 
-                <!-- Formulir Kebiasaan Harian -->
+                <!-- Daily Habits Form -->
                 <form id="habitsForm" onsubmit="saveHabits(event)">
                     <h3 class="text-xl font-bold mb-4">Jurnal Hari Ini - <span id="currentDate"></span></h3>
                     
-                    <!-- Input kebiasaan dibuat secara dinamis -->
-                    <div id="studentHabitInputs" class="space-y-4"></div>
+                    <!-- Bangun Pagi -->
+                    <div class="mb-6 p-4 bg-yellow-50 rounded-lg">
+                        <div class="flex items-center mb-2">
+                            <input type="checkbox" id="habit1" class="mr-3 w-5 h-5">
+                            <label class="text-lg font-semibold">🌅 Bangun Pagi</label>
+                        </div>
+                        <input type="time" id="wakeTime" class="ml-8 px-3 py-1 border rounded">
+                        <label class="ml-2 text-sm text-gray-600">Jam bangun (opsional)</label>
+                    </div>
+
+                    <!-- Beribadah -->
+                    <div class="mb-6 p-4 bg-blue-50 rounded-lg">
+                        <div class="flex items-center mb-2">
+                            <input type="checkbox" id="habit2" class="mr-3 w-5 h-5">
+                            <label class="text-lg font-semibold">🤲 Beribadah</label>
+                        </div>
+                        <div class="ml-8 space-y-2">
+                            <div class="grid grid-cols-2 md:grid-cols-5 gap-2">
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="prayer-check mr-2" data-prayer="subuh">
+                                    <span class="text-sm">Subuh</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="prayer-check mr-2" data-prayer="dzuhur">
+                                    <span class="text-sm">Dzuhur</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="prayer-check mr-2" data-prayer="ashar">
+                                    <span class="text-sm">Ashar</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="prayer-check mr-2" data-prayer="maghrib">
+                                    <span class="text-sm">Maghrib</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" class="prayer-check mr-2" data-prayer="isya">
+                                    <span class="text-sm">Isya</span>
+                                </label>
+                            </div>
+                            <input type="text" id="worshipDetail" placeholder="Keterangan tambahan (tahfiz, dll.)" class="w-full px-3 py-1 border rounded mt-2">
+                        </div>
+                    </div>
+
+                    <!-- Berolahraga -->
+                    <div class="mb-6 p-4 bg-green-50 rounded-lg">
+                        <div class="flex items-center mb-2">
+                            <input type="checkbox" id="habit3" class="mr-3 w-5 h-5">
+                            <label class="text-lg font-semibold">🏃‍♂️ Berolahraga</label>
+                        </div>
+                        <input type="text" id="exerciseType" placeholder="Jenis olahraga" class="ml-8 px-3 py-1 border rounded w-full max-w-md">
+                    </div>
+
+                    <!-- Makan Sehat -->
+                    <div class="mb-6 p-4 bg-orange-50 rounded-lg">
+                        <div class="flex items-center mb-2">
+                            <input type="checkbox" id="habit4" class="mr-3 w-5 h-5">
+                            <label class="text-lg font-semibold">🥗 Makan Sehat & Bergizi</label>
+                        </div>
+                        <input type="text" id="healthyFood" placeholder="Menu yang dimakan" class="ml-8 px-3 py-1 border rounded w-full max-w-md">
+                    </div>
+
+                    <!-- Gemar Belajar -->
+                    <div class="mb-6 p-4 bg-purple-50 rounded-lg">
+                        <div class="flex items-center mb-2">
+                            <input type="checkbox" id="habit5" class="mr-3 w-5 h-5">
+                            <label class="text-lg font-semibold">📚 Gemar Belajar</label>
+                        </div>
+                        <input type="text" id="studySubject" placeholder="Mata pelajaran yang dipelajari" class="ml-8 px-3 py-1 border rounded w-full max-w-md">
+                    </div>
+
+                    <!-- Bermasyarakat -->
+                    <div class="mb-6 p-4 bg-pink-50 rounded-lg">
+                        <div class="flex items-center mb-2">
+                            <input type="checkbox" id="habit6" class="mr-3 w-5 h-5">
+                            <label class="text-lg font-semibold">🤝 Bermasyarakat</label>
+                        </div>
+                        <input type="text" id="socialActivity" placeholder="Kegiatan sosial yang dilakukan" class="ml-8 px-3 py-1 border rounded w-full max-w-md">
+                    </div>
+
+                    <!-- Tidur Cepat -->
+                    <div class="mb-6 p-4 bg-indigo-50 rounded-lg">
+                        <div class="flex items-center mb-2">
+                            <input type="checkbox" id="habit7" class="mr-3 w-5 h-5">
+                            <label class="text-lg font-semibold">😴 Tidur Cepat</label>
+                        </div>
+                        <input type="time" id="sleepTime" class="ml-8 px-3 py-1 border rounded">
+                        <label class="ml-2 text-sm text-gray-600">Jam tidur</label>
+                    </div>
 
                     <!-- Catatan Tambahan -->
-                    <div class="mb-6 mt-6">
+                    <div class="mb-6">
                         <label class="block text-lg font-semibold mb-2">📝 Catatan Tambahan</label>
-                        <textarea id="additionalNotes" rows="3" class="w-full px-3 py-2 border rounded-lg" placeholder="Ceritakan pengalaman atau kebaikan yang kamu lakukan hari ini..."></textarea>
+                        <textarea id="additionalNotes" rows="3" class="w-full px-3 py-2 border rounded-lg" placeholder="Ceritakan pengalaman hari ini..."></textarea>
+                    </div>
+
+                    <!-- Upload Foto -->
+                    <div class="mb-6">
+                        <label class="block text-lg font-semibold mb-2">📷 Upload Foto (Opsional)</label>
+                        <input type="file" id="photoUpload" accept="image/*" class="w-full px-3 py-2 border rounded-lg">
+                        <p class="text-sm text-gray-500 mt-1">Maksimal 1MB</p>
                     </div>
 
                     <button type="submit" class="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-bold py-3 px-6 rounded-xl transition duration-300 transform hover:scale-105">
-                        💾 Simpan Jurnal Hari Ini
+                        💾 Simpan & Sinkronkan Data
                     </button>
                 </form>
 
-                <!-- Riwayat Siswa -->
+                <!-- Student History -->
                 <div class="mt-8">
-                    <h3 class="text-xl font-bold mb-4">📊 Riwayat Pengisian (7 Hari Terakhir)</h3>
+                    <h3 class="text-xl font-bold mb-4">📊 Riwayat Pengisian</h3>
                     <div id="studentHistory" class="space-y-4">
-                        <!-- Riwayat akan diisi di sini -->
+                        <!-- History will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Medals Section -->
+                <div class="mt-8">
+                    <h3 class="text-xl font-bold mb-4">🏆 Medali & Pencapaian</h3>
+                    <div id="studentMedals" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <!-- Medals will be populated here -->
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Dasbor Guru -->
+        <!-- Teacher Dashboard -->
         <div id="teacherDashboard" class="hidden">
-            <div class="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-6 md:p-8">
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-                     <div>
-                        <h2 class="text-2xl font-bold text-gray-800">Dashboard Guru</h2>
-                        <p class="text-gray-600">Data diperbarui secara real-time.</p>
-                    </div>
-                    <div class="flex flex-wrap gap-2 mt-4 md:mt-0">
-                         <button onclick="exportToExcel()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition duration-300">
+            <div class="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">Dashboard Guru</h2>
+                    <div class="flex gap-2">
+                        <button onclick="exportToExcel()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition duration-300">
                             📊 Export Excel
                         </button>
                         <button onclick="exportToPDF()" class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg transition duration-300">
                             📄 Export PDF
+                        </button>
+                        <button onclick="refreshTeacherData()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition duration-300">
+                            🔄 Refresh Data
                         </button>
                         <button onclick="logout()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition duration-300">
                             Keluar
@@ -283,655 +580,1339 @@
                     </div>
                 </div>
                 
-                <div class="mb-6 bg-green-50 p-4 rounded-lg">
+                <div class="mb-6">
                     <h3 class="text-lg font-semibold mb-2">Selamat datang, <span id="currentTeacherName"></span>!</h3>
-                    <p class="text-gray-600">Memantau Kelas: <span id="currentTeacherClass" class="font-bold"></span></p>
+                    <p class="text-gray-600">Kelas: <span id="currentTeacherClass"></span></p>
                 </div>
 
-                <!-- Kartu Statistik -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                    <div class="bg-blue-100 p-4 rounded-lg text-center"><h4 class="font-semibold text-blue-800">Total Siswa</h4><p class="text-3xl font-bold text-blue-600" id="totalStudents">0</p></div>
-                    <div class="bg-green-100 p-4 rounded-lg text-center"><h4 class="font-semibold text-green-800">Aktif Hari Ini</h4><p class="text-3xl font-bold text-green-600" id="activeToday">0</p></div>
-                    <div class="bg-yellow-100 p-4 rounded-lg text-center"><h4 class="font-semibold text-yellow-800">Rata-rata Skor</h4><p class="text-3xl font-bold text-yellow-600" id="averageScore">0</p></div>
-                    <div class="bg-purple-100 p-4 rounded-lg text-center"><h4 class="font-semibold text-purple-800">Konsistensi</h4><p class="text-3xl font-bold text-purple-600" id="consistency">0%</p></div>
+                <!-- Statistics Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                    <div class="bg-blue-100 p-4 rounded-lg">
+                        <h4 class="font-semibold text-blue-800">Total Siswa</h4>
+                        <p class="text-2xl font-bold text-blue-600" id="totalStudents">0</p>
+                    </div>
+                    <div class="bg-green-100 p-4 rounded-lg">
+                        <h4 class="font-semibold text-green-800">Aktif Hari Ini</h4>
+                        <p class="text-2xl font-bold text-green-600" id="activeToday">0</p>
+                    </div>
+                    <div class="bg-yellow-100 p-4 rounded-lg">
+                        <h4 class="font-semibold text-yellow-800">Rata-rata Skor</h4>
+                        <p class="text-2xl font-bold text-yellow-600" id="averageScore">0</p>
+                    </div>
+                    <div class="bg-purple-100 p-4 rounded-lg">
+                        <h4 class="font-semibold text-purple-800">Konsistensi</h4>
+                        <p class="text-2xl font-bold text-purple-600" id="consistency">0%</p>
+                    </div>
                 </div>
 
-                <!-- Grafik -->
+                <!-- Chart -->
                 <div class="mb-8">
-                    <h3 class="text-xl font-bold mb-4">📈 Grafik Progress Kelas (7 Hari Terakhir)</h3>
-                    <div class="bg-white p-4 rounded-lg shadow-inner">
+                    <h3 class="text-xl font-bold mb-4">📈 Grafik Progress Kelas</h3>
+                    <div class="bg-white p-4 rounded-lg">
                         <canvas id="classChart" width="400" height="200"></canvas>
                     </div>
                 </div>
 
-                <!-- Tabel Siswa -->
+                <!-- Students Table -->
                 <div class="overflow-x-auto">
-                    <h3 class="text-xl font-bold mb-4">📋 Data Siswa Hari Ini (<span id="todayDateForTable"></span>)</h3>
+                    <h3 class="text-xl font-bold mb-4">📋 Data Siswa</h3>
                     <table class="w-full bg-white rounded-lg overflow-hidden shadow-lg">
-                        <thead class="bg-gray-100">
+                        <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">Nama Siswa</th>
-                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">Skor</th>
-                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider hidden md:table-cell">Bangun Pagi</th>
-                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider hidden md:table-cell">Beribadah</th>
-                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider hidden md:table-cell">Olahraga</th>
-                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider hidden md:table-cell">Makan Sehat</th>
-                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider hidden md:table-cell">Belajar</th>
-                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider hidden md:table-cell">Bermasyarakat</th>
-                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider hidden md:table-cell">Tidur Cepat</th>
-                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase tracking-wider">Aksi</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Siswa</th>
+                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Bangun Pagi</th>
+                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Beribadah</th>
+                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Olahraga</th>
+                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Makan Sehat</th>
+                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Belajar</th>
+                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Bermasyarakat</th>
+                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Tidur Cepat</th>
+                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Skor</th>
+                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                             </tr>
                         </thead>
                         <tbody id="studentsTableBody" class="bg-white divide-y divide-gray-200">
-                            <!-- Baris tabel akan diisi di sini -->
+                            <!-- Table rows will be populated here -->
                         </tbody>
                     </table>
                 </div>
 
-                <!-- Papan Peringkat -->
+                <!-- Leaderboard -->
                 <div class="mt-8">
-                    <h3 class="text-xl font-bold mb-4">🏆 Papan Peringkat Mingguan</h3>
-                    <div id="leaderboard" class="bg-white rounded-lg p-4 shadow-inner">
-                        <!-- Papan peringkat akan diisi di sini -->
+                    <h3 class="text-xl font-bold mb-4">🏆 Ranking Kebaikan</h3>
+                    <div id="leaderboard" class="bg-white rounded-lg p-4">
+                        <!-- Leaderboard will be populated here -->
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Notifikasi -->
-    <div id="notification" class="hidden fixed top-20 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50">
+    <!-- Notification -->
+    <div id="notification" class="hidden fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg notification z-50">
         <span id="notificationText"></span>
     </div>
 
-    <!-- Modal Detail -->
-    <div id="detailModal" class="modal hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div class="modal-content bg-white rounded-2xl p-6 md:p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-xl font-bold text-gray-800" id="modalTitle">Detail Jurnal</h3>
-                <button onclick="closeModal()" class="text-gray-500 hover:text-gray-800">&times;</button>
-            </div>
-            <div id="modalBody" class="text-gray-700 space-y-4">
-                <!-- Konten modal di sini -->
-            </div>
-             <button onclick="closeModal()" class="w-full mt-6 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-300">
-                Tutup
+    <!-- Connection Status Modal -->
+    <div id="connectionModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl p-8 max-w-md mx-4 text-center">
+            <div class="text-6xl mb-4">📡</div>
+            <h3 class="text-2xl font-bold text-gray-800 mb-4">Status Koneksi</h3>
+            <p class="text-gray-600 mb-6" id="connectionMessage">Memeriksa koneksi...</p>
+            <button onclick="closeConnectionModal()" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-6 rounded-lg transition duration-300">
+                OK
             </button>
         </div>
     </div>
 
-
     <script>
-        // --- STATE GLOBAL & KONSTANTA ---
+        // Global variables
         let currentUser = null;
         let userRole = null;
-        let realtimeChannel = null; // Untuk menampung channel langganan realtime
-        let classChart = null; // Untuk menampung instance grafik
+        let isOnline = navigator.onLine;
+        let syncInProgress = false;
+        
+        // Local storage keys
+        const STUDENTS_KEY = 'studentsData';
+        const HABITS_KEY = 'habitsData';
+        const TEACHERS_KEY = 'teachersData';
+        const PENDING_SYNC_KEY = 'pendingSyncData';
 
-        const HABITS = [
-            { id: 1, name: 'Bangun Pagi', emoji: '🌅', color: 'yellow', details: 'time', detailLabel: 'Jam bangun' },
-            { id: 2, name: 'Beribadah', emoji: '🤲', color: 'blue', details: 'prayer', detailLabel: 'Detail Ibadah' },
-            { id: 3, name: 'Berolahraga', emoji: '🏃‍♂️', color: 'green', details: 'text', detailLabel: 'Jenis olahraga' },
-            { id: 4, name: 'Makan Sehat', emoji: '🥗', color: 'orange', details: 'text', detailLabel: 'Menu yang dimakan' },
-            { id: 5, name: 'Gemar Belajar', emoji: '📚', color: 'purple', details: 'text', detailLabel: 'Materi yang dipelajari' },
-            { id: 6, name: 'Bermasyarakat', emoji: '🤝', color: 'pink', details: 'text', detailLabel: 'Kegiatan sosial' },
-            { id: 7, name: 'Tidur Cepat', emoji: '😴', color: 'indigo', details: 'time', detailLabel: 'Jam tidur' }
-        ];
-
-        // --- INISIALISASI ---
+        // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             setCurrentDate();
-            renderHabitCards();
-            renderStudentHabitInputs();
-            checkSession();
+            initializeApp();
+            setupConnectionListeners();
+            updateSyncIndicator();
         });
 
-        function renderHabitCards() {
-            const container = document.getElementById('habitsDisplay');
-            container.innerHTML = HABITS.map(habit => `
-                <div class="habit-card bg-white/90 backdrop-blur-md rounded-2xl p-6 text-center shadow-xl">
-                    <div class="text-6xl mb-4">${habit.emoji}</div>
-                    <h3 class="text-lg font-bold text-gray-800 mb-2">${habit.name}</h3>
-                </div>
-            `).join('');
+        function initializeApp() {
+            // Check if Supabase is available
+            if (typeof window.supabaseClient !== 'undefined') {
+                console.log('Supabase connected - real-time sync enabled');
+                // Test connection
+                testSupabaseConnection();
+            } else {
+                console.log('Running in demo mode - using localStorage with sync simulation');
+                // Initialize demo data
+                loadSampleData();
+            }
+            
+            // Load homepage dashboard data
+            loadHomepageDashboard();
+        }
+        
+        async function testSupabaseConnection() {
+            try {
+                // Test connection by checking if tables exist
+                const { data, error } = await window.supabaseClient
+                    .from('students')
+                    .select('count', { count: 'exact', head: true });
+                
+                if (error && error.code === '42P01') {
+                    // Table doesn't exist, create tables
+                    console.log('Creating database tables...');
+                    await createDatabaseTables();
+                } else if (error) {
+                    console.error('Supabase connection error:', error);
+                    // Fallback to demo mode
+                    loadSampleData();
+                } else {
+                    console.log('Supabase connection successful');
+                    // Load data from Supabase
+                    await loadDataFromSupabase();
+                }
+            } catch (error) {
+                console.error('Error testing Supabase connection:', error);
+                // Fallback to demo mode
+                loadSampleData();
+            }
+        }
+        
+        async function createDatabaseTables() {
+            // Note: In a real application, you would create these tables through Supabase dashboard
+            // This is just for demonstration
+            console.log('Please create the following tables in your Supabase dashboard:');
+            console.log(`
+                -- Students table
+                CREATE TABLE students (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    class TEXT NOT NULL,
+                    unique_code TEXT NOT NULL,
+                    medals JSONB DEFAULT '[]',
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                    synced BOOLEAN DEFAULT TRUE
+                );
+                
+                -- Habits table
+                CREATE TABLE habits (
+                    id TEXT PRIMARY KEY,
+                    student_code TEXT NOT NULL,
+                    student TEXT NOT NULL,
+                    class TEXT NOT NULL,
+                    date DATE NOT NULL,
+                    habits JSONB NOT NULL,
+                    details JSONB DEFAULT '{}',
+                    notes TEXT,
+                    score INTEGER NOT NULL,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                    synced BOOLEAN DEFAULT TRUE
+                );
+                
+                -- Create indexes
+                CREATE INDEX idx_students_class ON students(class);
+                CREATE INDEX idx_habits_class ON habits(class);
+                CREATE INDEX idx_habits_date ON habits(date);
+                CREATE INDEX idx_habits_student_code ON habits(student_code);
+            `);
+            
+            // For now, use demo data
+            loadSampleData();
+        }
+        
+        async function loadDataFromSupabase() {
+            try {
+                // Load students data
+                const { data: studentsData, error: studentsError } = await window.supabaseClient
+                    .from('students')
+                    .select('*');
+                
+                if (studentsError) throw studentsError;
+                
+                // Load habits data
+                const { data: habitsData, error: habitsError } = await window.supabaseClient
+                    .from('habits')
+                    .select('*');
+                
+                if (habitsError) throw habitsError;
+                
+                // Convert to localStorage format
+                const studentsObj = {};
+                studentsData.forEach(student => {
+                    const key = `${student.unique_code}-${student.name}-${student.class}`;
+                    studentsObj[key] = {
+                        name: student.name,
+                        class: student.class,
+                        uniqueCode: student.unique_code,
+                        medals: student.medals || [],
+                        createdAt: student.created_at,
+                        synced: true
+                    };
+                });
+                
+                const habitsObj = {};
+                habitsData.forEach(habit => {
+                    const key = `${habit.student_code}-${habit.student}-${habit.class}-${habit.date}`;
+                    habitsObj[key] = {
+                        studentCode: habit.student_code,
+                        student: habit.student,
+                        class: habit.class,
+                        date: habit.date,
+                        habits: habit.habits,
+                        details: habit.details || {},
+                        notes: habit.notes,
+                        score: habit.score,
+                        createdAt: habit.created_at,
+                        synced: true
+                    };
+                });
+                
+                // Update localStorage
+                localStorage.setItem(STUDENTS_KEY, JSON.stringify(studentsObj));
+                localStorage.setItem(HABITS_KEY, JSON.stringify(habitsObj));
+                
+                console.log('Data loaded from Supabase successfully');
+                
+            } catch (error) {
+                console.error('Error loading data from Supabase:', error);
+                // Fallback to demo data
+                loadSampleData();
+            }
         }
 
-        function renderStudentHabitInputs() {
-            const container = document.getElementById('studentHabitInputs');
-            container.innerHTML = HABITS.map(habit => {
-                let detailInput = '';
-                if (habit.details === 'time') {
-                    detailInput = `<input type="time" id="detail${habit.id}" class="ml-8 px-3 py-1 border rounded w-auto"> <label class="ml-2 text-sm text-gray-600">${habit.detailLabel}</label>`;
-                } else if (habit.details === 'text') {
-                    detailInput = `<input type="text" id="detail${habit.id}" placeholder="${habit.detailLabel}" class="ml-8 px-3 py-1 border rounded w-full max-w-md">`;
-                } else if (habit.details === 'prayer') {
-                    detailInput = `
-                        <div class="ml-8 space-y-2">
-                            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
-                                ${['Subuh', 'Dzuhur', 'Ashar', 'Maghrib', 'Isya'].map(p => `
-                                <label class="flex items-center"><input type="checkbox" class="prayer-check mr-2" data-prayer="${p.toLowerCase()}"><span class="text-sm">${p}</span></label>
-                                `).join('')}
-                            </div>
-                            <input type="text" id="detail${habit.id}" placeholder="Keterangan tambahan (tahfiz, dll.)" class="w-full px-3 py-1 border rounded mt-2">
-                        </div>`;
-                }
+        function setupConnectionListeners() {
+            window.addEventListener('online', () => {
+                isOnline = true;
+                updateSyncIndicator();
+                showNotification('Koneksi tersambung! Menyinkronkan data... 🌐');
+                syncPendingData();
+            });
 
-                return `
-                <div class="p-4 bg-${habit.color}-50 rounded-lg">
-                    <div class="flex items-center mb-2">
-                        <input type="checkbox" id="habit${habit.id}" class="mr-3 w-5 h-5">
-                        <label for="habit${habit.id}" class="text-lg font-semibold cursor-pointer">${habit.emoji} ${habit.name}</label>
-                    </div>
-                    ${detailInput}
-                </div>
-                `;
-            }).join('');
+            window.addEventListener('offline', () => {
+                isOnline = false;
+                updateSyncIndicator();
+                showNotification('Mode offline - data akan disinkronkan saat online 📱');
+            });
+        }
+
+        function updateSyncIndicator() {
+            const indicator = document.getElementById('syncIndicator');
+            
+            if (syncInProgress) {
+                indicator.className = 'sync-indicator sync-syncing';
+                indicator.innerHTML = '🔄 Menyinkronkan...';
+            } else if (isOnline) {
+                indicator.className = 'sync-indicator sync-online';
+                indicator.innerHTML = '🌐 Online';
+            } else {
+                indicator.className = 'sync-indicator sync-offline';
+                indicator.innerHTML = '📱 Offline';
+            }
+        }
+
+        function generateUniqueCode() {
+            return 'STD' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 3).toUpperCase();
         }
 
         function setCurrentDate() {
             const today = new Date();
-            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            const dateString = today.toLocaleDateString('id-ID', options);
-            if (document.getElementById('currentDate')) {
-                document.getElementById('currentDate').textContent = dateString;
-            }
-             if (document.getElementById('todayDateForTable')) {
-                document.getElementById('todayDateForTable').textContent = today.toLocaleDateString('id-ID');
+            const dateString = today.toLocaleDateString('id-ID', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+            const currentDateElement = document.getElementById('currentDate');
+            if (currentDateElement) {
+                currentDateElement.textContent = dateString;
             }
         }
 
-        function checkSession() {
-            const sessionUser = sessionStorage.getItem('currentUser');
-            const sessionRole = sessionStorage.getItem('userRole');
-            if (sessionUser && sessionRole) {
-                currentUser = JSON.parse(sessionUser);
-                userRole = sessionRole;
-                if (userRole === 'student') {
-                    showStudentDashboard();
-                } else if (userRole === 'teacher') {
-                    showTeacherDashboard();
+        function loadSampleData() {
+            // Sample students data
+            let studentsData = JSON.parse(localStorage.getItem(STUDENTS_KEY)) || {};
+            if (Object.keys(studentsData).length === 0) {
+                studentsData = {
+                    'STD001-Budi-4A': { 
+                        name: 'Budi', 
+                        class: '4A', 
+                        uniqueCode: 'STD001',
+                        medals: [],
+                        createdAt: new Date().toISOString()
+                    },
+                    'STD002-Ani-4A': { 
+                        name: 'Ani', 
+                        class: '4A', 
+                        uniqueCode: 'STD002',
+                        medals: [],
+                        createdAt: new Date().toISOString()
+                    }
+                };
+                localStorage.setItem(STUDENTS_KEY, JSON.stringify(studentsData));
+            }
+
+            // Sample habits data
+            let habitsData = JSON.parse(localStorage.getItem(HABITS_KEY)) || {};
+            if (Object.keys(habitsData).length === 0) {
+                const today = new Date().toISOString().split('T')[0];
+                habitsData[`STD001-Budi-4A-${today}`] = {
+                    studentCode: 'STD001',
+                    student: 'Budi',
+                    class: '4A',
+                    date: today,
+                    habits: [true, true, true, true, true, true, false],
+                    details: {
+                        wakeTime: '05:00',
+                        prayers: ['subuh', 'dzuhur', 'ashar', 'maghrib', 'isya'],
+                        worshipDetail: 'Tahfiz 1 halaman',
+                        exerciseType: 'Lari 10 menit',
+                        healthyFood: 'Sayur + buah',
+                        studySubject: 'Matematika 30 menit',
+                        socialActivity: 'Membantu tetangga',
+                        sleepTime: '23:00'
+                    },
+                    notes: 'Hari ini senang sekali bisa membantu orang tua di rumah.',
+                    score: 6,
+                    createdAt: new Date().toISOString(),
+                    synced: false
+                };
+                localStorage.setItem(HABITS_KEY, JSON.stringify(habitsData));
+            }
+        }
+
+        function loadHomepageDashboard() {
+            const studentsData = JSON.parse(localStorage.getItem(STUDENTS_KEY)) || {};
+            const habitsData = JSON.parse(localStorage.getItem(HABITS_KEY)) || {};
+            
+            // Count total registered students
+            const totalStudents = Object.keys(studentsData).length;
+            document.getElementById('totalRegisteredStudents').textContent = totalStudents;
+            
+            // Count total journal entries
+            const totalEntries = Object.keys(habitsData).length;
+            document.getElementById('totalJournalEntries').textContent = totalEntries;
+            
+            // Count total medals (simplified calculation)
+            let totalMedals = 0;
+            Object.keys(habitsData).forEach(key => {
+                const data = habitsData[key];
+                if (data.score === 7) totalMedals += 1; // Perfect day medal
+                if (data.score >= 5) totalMedals += 1; // Good day medal
+            });
+            document.getElementById('totalMedalsEarned').textContent = totalMedals;
+            
+            // Load top performers
+            loadTopPerformers();
+        }
+        
+        function loadTopPerformers() {
+            const studentsData = JSON.parse(localStorage.getItem(STUDENTS_KEY)) || {};
+            const habitsData = JSON.parse(localStorage.getItem(HABITS_KEY)) || {};
+            const topPerformersContainer = document.getElementById('topPerformers');
+            
+            // Calculate weekly scores for all students
+            const weekStart = new Date();
+            weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+            
+            const studentScores = [];
+            
+            Object.keys(studentsData).forEach(studentKey => {
+                const student = studentsData[studentKey];
+                let weeklyScore = 0;
+                let daysActive = 0;
+                
+                for (let i = 0; i < 7; i++) {
+                    const date = new Date(weekStart);
+                    date.setDate(date.getDate() + i);
+                    const dateString = date.toISOString().split('T')[0];
+                    const habitKey = `${studentKey}-${dateString}`;
+                    
+                    if (habitsData[habitKey]) {
+                        weeklyScore += habitsData[habitKey].score;
+                        daysActive++;
+                    }
                 }
+                
+                if (daysActive > 0) {
+                    studentScores.push({
+                        name: student.name,
+                        class: student.class,
+                        score: weeklyScore,
+                        average: (weeklyScore / daysActive).toFixed(1),
+                        daysActive: daysActive
+                    });
+                }
+            });
+            
+            // Sort by score and take top 3
+            const topThree = studentScores.sort((a, b) => b.score - a.score).slice(0, 3);
+            
+            topPerformersContainer.innerHTML = '';
+            
+            if (topThree.length === 0) {
+                topPerformersContainer.innerHTML = '<p class="col-span-full text-gray-500 text-center py-8">Belum ada data siswa yang mengisi jurnal minggu ini.</p>';
+                return;
             }
+            
+            topThree.forEach((student, index) => {
+                const position = index + 1;
+                const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : '🥉';
+                const bgColor = position === 1 ? 'from-yellow-400 to-yellow-600' : 
+                               position === 2 ? 'from-gray-400 to-gray-600' : 
+                               'from-orange-400 to-orange-600';
+                
+                const performerCard = document.createElement('div');
+                performerCard.className = `bg-gradient-to-br ${bgColor} text-white p-6 rounded-xl shadow-lg text-center transform hover:scale-105 transition duration-300`;
+                performerCard.innerHTML = `
+                    <div class="text-4xl mb-2">${medal}</div>
+                    <h4 class="text-lg font-bold">${student.name}</h4>
+                    <p class="text-sm opacity-90">Kelas ${student.class}</p>
+                    <div class="mt-3">
+                        <div class="text-2xl font-bold">${student.score}</div>
+                        <div class="text-xs opacity-80">Total Poin</div>
+                    </div>
+                    <div class="mt-2">
+                        <div class="text-sm">Rata-rata: ${student.average}</div>
+                        <div class="text-xs opacity-80">${student.daysActive} hari aktif</div>
+                    </div>
+                `;
+                topPerformersContainer.appendChild(performerCard);
+            });
         }
 
-        // --- NAVIGASI UI & FUNGSI BANTU ---
         function showStudentLogin() {
-            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('homepageDashboard').classList.add('hidden');
+            document.getElementById('habitsDisplay').classList.add('hidden');
+            document.getElementById('loginSection').classList.remove('hidden');
             document.getElementById('studentLoginForm').classList.remove('hidden');
         }
 
         function showTeacherLogin() {
-            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('homepageDashboard').classList.add('hidden');
+            document.getElementById('habitsDisplay').classList.add('hidden');
+            document.getElementById('loginSection').classList.remove('hidden');
             document.getElementById('teacherLoginForm').classList.remove('hidden');
         }
 
         function backToMain() {
             document.getElementById('studentLoginForm').classList.add('hidden');
             document.getElementById('teacherLoginForm').classList.add('hidden');
-            document.getElementById('loginSection').classList.remove('hidden');
-        }
-        
-        function showLoadingSpinner(form, show = true) {
-            const spinner = form.querySelector('.loading-spinner');
-            const button = form.querySelector('button[type="submit"]');
-            if (spinner && button) {
-                spinner.classList.toggle('hidden', !show);
-                button.disabled = show;
-            }
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('homepageDashboard').classList.remove('hidden');
+            document.getElementById('habitsDisplay').classList.remove('hidden');
         }
 
-        function showNotification(message, isError = false, duration = 4000) {
-            const notification = document.getElementById('notification');
-            const notificationText = document.getElementById('notificationText');
-            
-            notificationText.textContent = message;
-            notification.className = `fixed top-20 right-4 text-white px-6 py-3 rounded-lg shadow-lg z-50 notification ${isError ? 'bg-red-500' : 'bg-green-500'}`;
-            notification.classList.remove('hidden');
-            
-            setTimeout(() => {
-                notification.classList.add('hidden');
-            }, duration);
-        }
-
-        function closeModal() {
-            const modal = document.getElementById('detailModal');
-            modal.classList.add('hidden');
-            modal.querySelector('.modal-content').classList.remove('scale-100');
-            modal.querySelector('.modal-content').classList.add('scale-95');
-        }
-
-        function copyCode() {
-            const code = document.getElementById('currentStudentCode').textContent;
-            const tempInput = document.createElement('input');
-            tempInput.value = code;
-            document.body.appendChild(tempInput);
-            tempInput.select();
-            document.execCommand('copy');
-            document.body.removeChild(tempInput);
-            showNotification('Kode unik berhasil disalin!');
-        }
-
-        // --- LOGIN & LOGOUT ---
         async function studentLogin(event) {
             event.preventDefault();
-            const form = event.target;
-            showLoadingSpinner(form);
+            showLoadingSpinner(event.target);
             
-            const name = document.getElementById('studentName').value.trim();
+            const name = document.getElementById('studentName').value;
             const studentClass = document.getElementById('studentClass').value;
-            let studentCode = document.getElementById('studentCode').value.trim();
             
-            if (!studentCode) {
-                studentCode = 'S' + Date.now().toString(36).toUpperCase();
-            }
+            // Generate unique code automatically
+            const studentCode = generateUniqueCode();
+            const studentKey = `${studentCode}-${name}-${studentClass}`;
             
-            const studentId = `${studentCode}-${name.replace(/\s+/g, '')}-${studentClass}`;
-            
-            currentUser = { name, class: studentClass, uniqueCode: studentCode, id: studentId };
-            userRole = 'student';
-
             try {
-                // Cek apakah siswa sudah ada, jika tidak, buat baru
-                let { data: student, error } = await window.supabase
-                    .from('students')
-                    .select('id')
-                    .eq('id', studentId)
-                    .single();
-
-                if (error && error.code !== 'PGRST116') { // PGRST116: "Hasilnya berisi 0 baris"
-                    throw error;
-                }
-
-                if (!student) {
-                    const { error: insertError } = await window.supabase.from('students').insert({
-                        id: studentId,
-                        name: currentUser.name,
-                        class: currentUser.class,
-                        uniqueCode: currentUser.uniqueCode
-                    });
-                    if (insertError) throw insertError;
-                    showNotification(`Selamat datang, ${name}! Kode unikmu adalah ${studentCode}. Simpan baik-baik ya!`);
+                // Check if student exists in cloud or local storage
+                let studentsData = JSON.parse(localStorage.getItem(STUDENTS_KEY)) || {};
+                
+                // Check if student with same name and class already exists
+                const existingStudent = Object.keys(studentsData).find(key => {
+                    const student = studentsData[key];
+                    return student.name === name && student.class === studentClass;
+                });
+                
+                if (existingStudent) {
+                    // Use existing student data
+                    const student = studentsData[existingStudent];
+                    currentUser = { name: student.name, class: student.class, uniqueCode: student.uniqueCode };
+                } else {
+                    // Create new student
+                    studentsData[studentKey] = { 
+                        name, 
+                        class: studentClass, 
+                        uniqueCode: studentCode,
+                        medals: [],
+                        createdAt: new Date().toISOString(),
+                        synced: false // Mark as not synced initially
+                    };
+                    localStorage.setItem(STUDENTS_KEY, JSON.stringify(studentsData));
+                    currentUser = { name, class: studentClass, uniqueCode: studentCode };
                 }
                 
-                sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
-                sessionStorage.setItem('userRole', userRole);
-
+                userRole = 'student';
+                
+                hideLoadingSpinner(event.target);
                 showStudentDashboard();
-
+                
             } catch (error) {
-                console.error("Kesalahan login siswa:", error);
-                showNotification(`Gagal login: ${error.message}`, true);
-            } finally {
-                showLoadingSpinner(form, false);
+                hideLoadingSpinner(event.target);
+                showNotification('Terjadi kesalahan saat login. Coba lagi.');
+                console.error('Login error:', error);
             }
         }
 
         async function teacherLogin(event) {
             event.preventDefault();
-            const form = event.target;
-            showLoadingSpinner(form);
+            showLoadingSpinner(event.target);
             
-            const name = document.getElementById('teacherName').value.trim();
+            const name = document.getElementById('teacherName').value;
             const password = document.getElementById('teacherPassword').value;
             const teacherClass = document.getElementById('teacherClass').value;
             
+            // Check password
             if (password !== '@SDN008purnama') {
-                showNotification('Password salah! Silakan coba lagi.', true);
-                showLoadingSpinner(form, false);
+                hideLoadingSpinner(event.target);
+                showNotification('Password salah! Silakan coba lagi.');
                 return;
             }
             
             currentUser = { name, class: teacherClass };
             userRole = 'teacher';
-
-            sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
-            sessionStorage.setItem('userRole', userRole);
-
-            showTeacherDashboard();
-            showLoadingSpinner(form, false);
-        }
-
-        function logout() {
-            if (realtimeChannel) {
-                window.supabase.removeChannel(realtimeChannel);
-                realtimeChannel = null;
-            }
-            currentUser = null;
-            userRole = null;
-            sessionStorage.clear();
             
-            document.getElementById('studentDashboard').classList.add('hidden');
-            document.getElementById('teacherDashboard').classList.add('hidden');
-            document.getElementById('habitsDisplay').classList.remove('hidden');
-            document.getElementById('loginSection').classList.remove('hidden');
-            backToMain();
+            // Check if this is first time login for this teacher
+            const teacherKey = `${name}-${teacherClass}`;
+            const isFirstLogin = !localStorage.getItem(`teacher_${teacherKey}_logged`);
+            
+            if (isFirstLogin) {
+                localStorage.setItem(`teacher_${teacherKey}_logged`, 'true');
+                
+                setTimeout(() => {
+                    alert(`🔐 PENTING - SIMPAN INFORMASI INI!\n\n` +
+                          `Nama: ${name}\n` +
+                          `Password: @SDN008purnama\n` +
+                          `Kelas: ${teacherClass}\n\n` +
+                          `Harap simpan informasi login ini dengan aman.\n` +
+                          `Password ini berlaku untuk semua guru di SDN 008 Purnama.`);
+                }, 1000);
+            }
+            
+            hideLoadingSpinner(event.target);
+            showTeacherDashboard();
+            
+            // Load data from cloud if online
+            if (isOnline) {
+                await loadTeacherDataFromCloud();
+            }
         }
 
-        // --- DASBOR SISWA ---
+        function showLoadingSpinner(form) {
+            const spinner = form.querySelector('.loading-spinner');
+            const button = form.querySelector('button[type="submit"]');
+            if (spinner && button) {
+                spinner.classList.remove('hidden');
+                button.disabled = true;
+            }
+        }
+
+        function hideLoadingSpinner(form) {
+            const spinner = form.querySelector('.loading-spinner');
+            const button = form.querySelector('button[type="submit"]');
+            if (spinner && button) {
+                spinner.classList.add('hidden');
+                button.disabled = false;
+            }
+        }
+
         function showStudentDashboard() {
             document.getElementById('studentLoginForm').classList.add('hidden');
             document.getElementById('habitsDisplay').classList.add('hidden');
-            document.getElementById('loginSection').classList.add('hidden');
             document.getElementById('studentDashboard').classList.remove('hidden');
             
             document.getElementById('currentStudentName').textContent = currentUser.name;
             document.getElementById('currentStudentClass').textContent = currentUser.class;
-            document.getElementById('currentStudentCode').textContent = currentUser.uniqueCode;
             
-            loadStudentData();
+            loadStudentProgress();
+            loadStudentHistory();
+            loadStudentMedals();
+            loadTodayHabits();
         }
 
-        async function loadStudentData() {
-            const today = new Date().toISOString().split('T')[0];
-            const habitId = `${currentUser.id}-${today}`;
-            
-            try {
-                const { data, error } = await window.supabase
-                    .from('habits')
-                    .select('*')
-                    .eq('id', habitId)
-                    .single();
-
-                if (error && error.code !== 'PGRST116') throw error;
-
-                if (data) {
-                    // Isi formulir dengan data hari ini
-                    HABITS.forEach(habit => {
-                        document.getElementById(`habit${habit.id}`).checked = data.habits[habit.id-1];
-                        if (habit.details === 'prayer') {
-                            const prayerChecks = document.querySelectorAll('.prayer-check');
-                            prayerChecks.forEach(pc => pc.checked = false); // Reset dulu
-                            if (data.details.prayers) {
-                                data.details.prayers.forEach(p => {
-                                    const checkbox = document.querySelector(`.prayer-check[data-prayer="${p}"]`);
-                                    if (checkbox) checkbox.checked = true;
-                                });
-                            }
-                            document.getElementById(`detail${habit.id}`).value = data.details.worshipDetail || '';
-                        } else {
-                             document.getElementById(`detail${habit.id}`).value = data.details[`detail${habit.id}`] || '';
-                        }
-                    });
-                    document.getElementById('additionalNotes').value = data.notes || '';
-                } else {
-                    document.getElementById('habitsForm').reset();
-                }
-            } catch (error) {
-                console.error("Gagal memuat kebiasaan hari ini:", error);
-            }
-
-            loadStudentHistoryAndProgress();
-        }
-        
-        async function loadStudentHistoryAndProgress() {
-            const historyContainer = document.getElementById('studentHistory');
-            historyContainer.innerHTML = '<p class="text-gray-500 text-center py-4">Memuat riwayat...</p>';
-
-            const today = new Date();
-            const sevenDaysAgo = new Date(today);
-            sevenDaysAgo.setDate(today.getDate() - 6); // Ambil data 7 hari terakhir
-            const sevenDaysAgoString = sevenDaysAgo.toISOString().split('T')[0];
-
-            const { data: historyData, error } = await window.supabase
-                .from('habits')
-                .select('*')
-                .eq('studentId', currentUser.id)
-                .gte('date', sevenDaysAgoString)
-                .order('date', { ascending: false });
-
-            if (error) {
-                console.error("Gagal mengambil riwayat:", error);
-                historyContainer.innerHTML = '<p class="text-red-500 text-center py-4">Gagal memuat riwayat.</p>';
-                return;
-            }
-
-            let historyHTML = '';
-            let completedHabits = 0;
-            let totalPossibleHabits = 0;
-
-            historyData.forEach(data => {
-                const date = new Date(data.date + 'T00:00:00');
-                const score = data.score;
-                
-                completedHabits += score;
-                totalPossibleHabits += HABITS.length;
-
-                historyHTML += `
-                    <div class="bg-gray-50 p-3 rounded-lg">
-                        <div class="flex justify-between items-center">
-                            <span class="font-semibold">${date.toLocaleDateString('id-ID', {weekday: 'long', day: 'numeric', month: 'short'})}</span>
-                            <span class="text-lg font-bold ${score === 7 ? 'text-green-600' : score >= 5 ? 'text-yellow-600' : 'text-red-600'}">${score}/${HABITS.length}</span>
-                        </div>
-                        ${data.notes ? `<p class="text-sm text-gray-600 mt-1 italic">"${data.notes}"</p>` : ''}
-                    </div>`;
-            });
-
-            historyContainer.innerHTML = historyHTML || '<p class="text-gray-500 text-center py-4">Belum ada riwayat pengisian.</p>';
-            
-            const progress = totalPossibleHabits > 0 ? Math.round((completedHabits / totalPossibleHabits) * 100) : 0;
-            document.getElementById('weeklyProgress').textContent = `${progress}%`;
-            document.getElementById('progressBar').style.width = `${progress}%`;
-        }
-
-        async function saveHabits(event) {
-            event.preventDefault();
-            const today = new Date().toISOString().split('T')[0];
-            const habitId = `${currentUser.id}-${today}`;
-
-            const habitChecks = HABITS.map(h => document.getElementById(`habit${h.id}`).checked);
-            const score = habitChecks.filter(Boolean).length;
-            const prayers = Array.from(document.querySelectorAll('.prayer-check:checked')).map(el => el.dataset.prayer);
-
-            const habitData = {
-                id: habitId,
-                studentId: currentUser.id,
-                studentName: currentUser.name,
-                class: currentUser.class,
-                date: today,
-                habits: habitChecks,
-                details: {
-                    detail1: document.getElementById('detail1').value,
-                    prayers: prayers,
-                    worshipDetail: document.getElementById('detail2').value,
-                    detail3: document.getElementById('detail3').value,
-                    detail4: document.getElementById('detail4').value,
-                    detail5: document.getElementById('detail5').value,
-                    detail6: document.getElementById('detail6').value,
-                    detail7: document.getElementById('detail7').value,
-                },
-                notes: document.getElementById('additionalNotes').value,
-                score: score,
-                updatedAt: new Date().toISOString()
-            };
-
-            try {
-                const { error } = await window.supabase.from('habits').upsert(habitData);
-                if (error) throw error;
-                showNotification('Jurnal berhasil disimpan! 🎉');
-                loadStudentHistoryAndProgress();
-            } catch (error) {
-                console.error("Gagal menyimpan kebiasaan:", error);
-                showNotification(`Gagal menyimpan: ${error.message}`, true);
-            }
-        }
-
-        // --- DASBOR GURU ---
         function showTeacherDashboard() {
             document.getElementById('teacherLoginForm').classList.add('hidden');
             document.getElementById('habitsDisplay').classList.add('hidden');
-            document.getElementById('loginSection').classList.add('hidden');
             document.getElementById('teacherDashboard').classList.remove('hidden');
             
             document.getElementById('currentTeacherName').textContent = currentUser.name;
             document.getElementById('currentTeacherClass').textContent = currentUser.class;
             
-            setupTeacherDashboardListener();
+            loadTeacherData();
+            createClassChart();
         }
 
-        function setupTeacherDashboardListener() {
-            if (realtimeChannel) {
-                window.supabase.removeChannel(realtimeChannel);
+        async function syncData() {
+            if (syncInProgress) return;
+            
+            syncInProgress = true;
+            updateSyncIndicator();
+            
+            try {
+                if (typeof window.supabaseClient !== 'undefined') {
+                    // Real Supabase sync
+                    await syncWithSupabase();
+                } else {
+                    // Demo mode - simulate sync
+                    await simulateSync();
+                }
+                
+                showNotification('Data berhasil disinkronkan! ✅');
+            } catch (error) {
+                console.error('Sync error:', error);
+                showNotification('Gagal menyinkronkan data. Akan dicoba lagi nanti.');
+            } finally {
+                syncInProgress = false;
+                updateSyncIndicator();
+            }
+        }
+
+        async function simulateSync() {
+            // Simulate network delay
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Mark all data as synced
+            let habitsData = JSON.parse(localStorage.getItem(HABITS_KEY)) || {};
+            Object.keys(habitsData).forEach(key => {
+                habitsData[key].synced = true;
+            });
+            localStorage.setItem(HABITS_KEY, JSON.stringify(habitsData));
+            
+            let studentsData = JSON.parse(localStorage.getItem(STUDENTS_KEY)) || {};
+            Object.keys(studentsData).forEach(key => {
+                studentsData[key].synced = true;
+            });
+            localStorage.setItem(STUDENTS_KEY, JSON.stringify(studentsData));
+            
+            // Clear pending sync
+            localStorage.removeItem(PENDING_SYNC_KEY);
+        }
+
+        async function syncWithSupabase() {
+            try {
+                // Sync students data
+                const studentsData = JSON.parse(localStorage.getItem(STUDENTS_KEY)) || {};
+                for (const [key, student] of Object.entries(studentsData)) {
+                    if (!student.synced) {
+                        const { error } = await window.supabaseClient
+                            .from('students')
+                            .upsert({
+                                id: key,
+                                name: student.name,
+                                class: student.class,
+                                unique_code: student.uniqueCode,
+                                medals: student.medals || [],
+                                created_at: student.createdAt,
+                                synced: true
+                            });
+                        
+                        if (error) {
+                            console.error('Error syncing student:', error);
+                            throw error;
+                        }
+                        
+                        student.synced = true;
+                    }
+                }
+                localStorage.setItem(STUDENTS_KEY, JSON.stringify(studentsData));
+                
+                // Sync habits data
+                const habitsData = JSON.parse(localStorage.getItem(HABITS_KEY)) || {};
+                for (const [key, habit] of Object.entries(habitsData)) {
+                    if (!habit.synced) {
+                        const { error } = await window.supabaseClient
+                            .from('habits')
+                            .upsert({
+                                id: key,
+                                student_code: habit.studentCode,
+                                student: habit.student,
+                                class: habit.class,
+                                date: habit.date,
+                                habits: habit.habits,
+                                details: habit.details || {},
+                                notes: habit.notes,
+                                score: habit.score,
+                                created_at: habit.createdAt,
+                                synced: true
+                            });
+                        
+                        if (error) {
+                            console.error('Error syncing habit:', error);
+                            throw error;
+                        }
+                        
+                        habit.synced = true;
+                    }
+                }
+                localStorage.setItem(HABITS_KEY, JSON.stringify(habitsData));
+                
+                console.log('Data synced to Supabase successfully');
+                
+            } catch (error) {
+                console.error('Error syncing with Supabase:', error);
+                throw error;
+            }
+        }
+
+        function addToPendingSync(collection, key, data) {
+            let pendingSync = JSON.parse(localStorage.getItem(PENDING_SYNC_KEY)) || {};
+            if (!pendingSync[collection]) {
+                pendingSync[collection] = {};
+            }
+            pendingSync[collection][key] = data;
+            localStorage.setItem(PENDING_SYNC_KEY, JSON.stringify(pendingSync));
+        }
+
+        async function syncPendingData() {
+            const pendingSync = JSON.parse(localStorage.getItem(PENDING_SYNC_KEY)) || {};
+            
+            if (Object.keys(pendingSync).length > 0) {
+                await syncData();
+            }
+        }
+
+        function loadStudentProgress() {
+            const studentKey = `${currentUser.uniqueCode}-${currentUser.name}-${currentUser.class}`;
+            const weekStart = new Date();
+            weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+            
+            let totalDays = 0;
+            let completedHabits = 0;
+            
+            const habitsData = JSON.parse(localStorage.getItem(HABITS_KEY)) || {};
+            
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(weekStart);
+                date.setDate(date.getDate() + i);
+                const dateString = date.toISOString().split('T')[0];
+                const habitKey = `${studentKey}-${dateString}`;
+                
+                if (habitsData[habitKey]) {
+                    totalDays++;
+                    completedHabits += habitsData[habitKey].habits.filter(h => h).length;
+                }
             }
             
-            // Ambil data awal
-            fetchTeacherData();
+            const progress = totalDays > 0 ? Math.round((completedHabits / (totalDays * 7)) * 100) : 0;
+            document.getElementById('weeklyProgress').textContent = `${progress}%`;
+            document.getElementById('progressBar').style.width = `${progress}%`;
+        }
 
-            // Atur langganan realtime
-            realtimeChannel = window.supabase.channel('public:habits')
-              .on('postgres_changes', 
-                { event: '*', schema: 'public', table: 'habits', filter: `class=eq.${currentUser.class}` }, 
-                (payload) => {
-                    console.log('Perubahan realtime diterima!', payload);
-                    fetchTeacherData(); // Ambil ulang semua data saat ada perubahan
+        function loadStudentHistory() {
+            const studentKey = `${currentUser.uniqueCode}-${currentUser.name}-${currentUser.class}`;
+            const historyContainer = document.getElementById('studentHistory');
+            historyContainer.innerHTML = '';
+            
+            const habitsData = JSON.parse(localStorage.getItem(HABITS_KEY)) || {};
+            const studentHabits = Object.keys(habitsData)
+                .filter(key => key.startsWith(studentKey))
+                .sort((a, b) => b.split('-').pop().localeCompare(a.split('-').pop()))
+                .slice(0, 7);
+            
+            if (studentHabits.length === 0) {
+                historyContainer.innerHTML = '<p class="text-gray-500 text-center py-4">Belum ada riwayat pengisian.</p>';
+                return;
+            }
+            
+            studentHabits.forEach(key => {
+                const data = habitsData[key];
+                const date = new Date(data.date).toLocaleDateString('id-ID');
+                const score = data.score;
+                const syncStatus = data.synced ? '✅' : '⏳';
+                
+                const historyItem = document.createElement('div');
+                historyItem.className = 'bg-gray-50 p-4 rounded-lg';
+                historyItem.innerHTML = `
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-semibold">${date}</span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-lg font-bold ${score === 7 ? 'text-green-600' : score >= 5 ? 'text-yellow-600' : 'text-red-600'}">
+                                ${score}/7
+                            </span>
+                            <span title="${data.synced ? 'Tersinkronisasi' : 'Menunggu sinkronisasi'}">${syncStatus}</span>
+                        </div>
+                    </div>
+                    <div class="text-sm text-gray-600">
+                        ${data.notes || 'Tidak ada catatan'}
+                    </div>
+                `;
+                historyContainer.appendChild(historyItem);
+            });
+        }
+
+        function loadStudentMedals() {
+            const studentKey = `${currentUser.uniqueCode}-${currentUser.name}-${currentUser.class}`;
+            const medalsContainer = document.getElementById('studentMedals');
+            medalsContainer.innerHTML = '';
+            
+            const habitsData = JSON.parse(localStorage.getItem(HABITS_KEY)) || {};
+            
+            // Check for perfect week medals
+            const weekStart = new Date();
+            weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+            
+            let perfectDays = 0;
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(weekStart);
+                date.setDate(date.getDate() + i);
+                const dateString = date.toISOString().split('T')[0];
+                const habitKey = `${studentKey}-${dateString}`;
+                
+                if (habitsData[habitKey] && habitsData[habitKey].score === 7) {
+                    perfectDays++;
                 }
-              )
-              .subscribe();
-        }
-
-        async function fetchTeacherData() {
-            const { data: students, error: studentsError } = await window.supabase
-                .from('students')
-                .select('*')
-                .eq('class', currentUser.class);
-
-            if (studentsError) {
-                console.error("Gagal mengambil data siswa:", studentsError);
-                showNotification("Gagal memuat data siswa.", true);
+            }
+            
+            // Award medals based on performance
+            const medals = [];
+            if (perfectDays >= 7) medals.push({ name: 'Sempurna Seminggu', icon: '🏆', color: 'gold' });
+            if (perfectDays >= 5) medals.push({ name: 'Konsisten', icon: '⭐', color: 'silver' });
+            if (perfectDays >= 3) medals.push({ name: 'Rajin', icon: '🌟', color: 'bronze' });
+            
+            if (medals.length === 0) {
+                medalsContainer.innerHTML = '<p class="col-span-full text-gray-500 text-center py-4">Belum ada medali. Terus semangat!</p>';
                 return;
             }
-
-            const { data: habits, error: habitsError } = await window.supabase
-                .from('habits')
-                .select('*')
-                .eq('class', currentUser.class);
-
-            if (habitsError) {
-                console.error("Gagal mengambil data kebiasaan:", habitsError);
-                showNotification("Gagal memuat data jurnal.", true);
-                return;
-            }
-
-            updateTeacherUI(students, habits);
+            
+            medals.forEach(medal => {
+                const medalElement = document.createElement('div');
+                medalElement.className = `medal bg-${medal.color === 'gold' ? 'yellow' : medal.color === 'silver' ? 'gray' : 'orange'}-100 p-4 rounded-lg text-center`;
+                medalElement.innerHTML = `
+                    <div class="text-4xl mb-2">${medal.icon}</div>
+                    <div class="text-sm font-semibold">${medal.name}</div>
+                `;
+                medalsContainer.appendChild(medalElement);
+            });
         }
 
-        function updateTeacherUI(students, habits) {
-            const today = new Date();
-            const todayString = today.toISOString().split('T')[0];
-            const startOfWeek = getStartOfWeek(today);
+        function loadTodayHabits() {
+            const studentKey = `${currentUser.uniqueCode}-${currentUser.name}-${currentUser.class}`;
+            const today = new Date().toISOString().split('T')[0];
+            const habitKey = `${studentKey}-${today}`;
+            
+            const habitsData = JSON.parse(localStorage.getItem(HABITS_KEY)) || {};
+            
+            if (habitsData[habitKey]) {
+                const data = habitsData[habitKey];
+                
+                // Load checkboxes
+                for (let i = 1; i <= 7; i++) {
+                    document.getElementById(`habit${i}`).checked = data.habits[i-1];
+                }
+                
+                // Load details
+                if (data.details) {
+                    document.getElementById('wakeTime').value = data.details.wakeTime || '';
+                    document.getElementById('worshipDetail').value = data.details.worshipDetail || '';
+                    document.getElementById('exerciseType').value = data.details.exerciseType || '';
+                    document.getElementById('healthyFood').value = data.details.healthyFood || '';
+                    document.getElementById('studySubject').value = data.details.studySubject || '';
+                    document.getElementById('socialActivity').value = data.details.socialActivity || '';
+                    document.getElementById('sleepTime').value = data.details.sleepTime || '';
+                    
+                    // Load prayer checkboxes
+                    if (data.details.prayers) {
+                        data.details.prayers.forEach(prayer => {
+                            const checkbox = document.querySelector(`[data-prayer="${prayer}"]`);
+                            if (checkbox) checkbox.checked = true;
+                        });
+                    }
+                }
+                
+                document.getElementById('additionalNotes').value = data.notes || '';
+            }
+        }
 
-            // --- Kartu Statistik ---
-            const habitsToday = habits.filter(h => h.date === todayString);
-            const activeTodayCount = new Set(habitsToday.map(h => h.studentId)).size;
-            const totalScoreToday = habitsToday.reduce((sum, h) => sum + h.score, 0);
-            const averageScore = activeTodayCount > 0 ? (totalScoreToday / activeTodayCount).toFixed(1) : 0;
-            const consistency = students.length > 0 ? Math.round((activeTodayCount / students.length) * 100) : 0;
+        async function saveHabits(event) {
+            event.preventDefault();
+            
+            const studentKey = `${currentUser.uniqueCode}-${currentUser.name}-${currentUser.class}`;
+            const today = new Date().toISOString().split('T')[0];
+            const habitKey = `${studentKey}-${today}`;
+            
+            // Collect habit data
+            const habits = [];
+            for (let i = 1; i <= 7; i++) {
+                habits.push(document.getElementById(`habit${i}`).checked);
+            }
+            
+            // Collect prayer data
+            const prayers = [];
+            document.querySelectorAll('.prayer-check:checked').forEach(checkbox => {
+                prayers.push(checkbox.dataset.prayer);
+            });
+            
+            const details = {
+                wakeTime: document.getElementById('wakeTime').value,
+                prayers: prayers,
+                worshipDetail: document.getElementById('worshipDetail').value,
+                exerciseType: document.getElementById('exerciseType').value,
+                healthyFood: document.getElementById('healthyFood').value,
+                studySubject: document.getElementById('studySubject').value,
+                socialActivity: document.getElementById('socialActivity').value,
+                sleepTime: document.getElementById('sleepTime').value
+            };
+            
+            const notes = document.getElementById('additionalNotes').value;
+            const score = habits.filter(h => h).length;
+            
+            const habitData = {
+                studentCode: currentUser.uniqueCode,
+                student: currentUser.name,
+                class: currentUser.class,
+                date: today,
+                habits: habits,
+                details: details,
+                notes: notes,
+                score: score,
+                createdAt: new Date().toISOString(),
+                synced: false // Mark as not synced initially
+            };
+            
+            // Save to local storage
+            let habitsData = JSON.parse(localStorage.getItem(HABITS_KEY)) || {};
+            habitsData[habitKey] = habitData;
+            localStorage.setItem(HABITS_KEY, JSON.stringify(habitsData));
+            
+            // Also ensure student data exists
+            let studentsData = JSON.parse(localStorage.getItem(STUDENTS_KEY)) || {};
+            if (!studentsData[studentKey]) {
+                studentsData[studentKey] = {
+                    name: currentUser.name,
+                    class: currentUser.class,
+                    uniqueCode: currentUser.uniqueCode,
+                    medals: [],
+                    createdAt: new Date().toISOString(),
+                    synced: true
+                };
+                localStorage.setItem(STUDENTS_KEY, JSON.stringify(studentsData));
+            }
+            
+            showNotification('Data berhasil disimpan! 🎉');
+            
+            // Auto-sync if online
+            if (isOnline && typeof window.supabaseClient !== 'undefined') {
+                try {
+                    await syncData();
+                } catch (error) {
+                    console.error('Auto-sync failed:', error);
+                    showNotification('Data disimpan lokal. Akan disinkronkan saat koneksi stabil.');
+                }
+            }
+            
+            loadStudentProgress();
+            loadStudentHistory();
+            loadStudentMedals();
+        }
 
-            document.getElementById('totalStudents').textContent = students.length;
-            document.getElementById('activeToday').textContent = activeTodayCount;
+        async function loadTeacherData() {
+            // Load from local storage first
+            const studentsData = JSON.parse(localStorage.getItem(STUDENTS_KEY)) || {};
+            const habitsData = JSON.parse(localStorage.getItem(HABITS_KEY)) || {};
+            
+            // Get all students from the same class who have actually saved data
+            const classStudents = new Set();
+            
+            // Only add students from habitsData (students who have actually saved journal entries)
+            Object.keys(habitsData).forEach(key => {
+                const data = habitsData[key];
+                if (data.class === currentUser.class) {
+                    const studentKey = `${data.studentCode}-${data.student}-${data.class}`;
+                    classStudents.add(studentKey);
+                    
+                    // Ensure student exists in studentsData
+                    if (!studentsData[studentKey]) {
+                        studentsData[studentKey] = { 
+                            name: data.student, 
+                            class: data.class, 
+                            uniqueCode: data.studentCode,
+                            medals: [],
+                            synced: false
+                        };
+                    }
+                }
+            });
+            
+            const classStudentsArray = Array.from(classStudents);
+            document.getElementById('totalStudents').textContent = classStudentsArray.length;
+            
+            // Count active students today (only those who saved data today)
+            const today = new Date().toISOString().split('T')[0];
+            const activeToday = classStudentsArray.filter(studentKey => {
+                const habitKey = `${studentKey}-${today}`;
+                return habitsData[habitKey];
+            }).length;
+            
+            document.getElementById('activeToday').textContent = activeToday;
+            
+            // Calculate average score for today
+            let totalScore = 0;
+            let totalEntries = 0;
+            
+            classStudentsArray.forEach(studentKey => {
+                const habitKey = `${studentKey}-${today}`;
+                if (habitsData[habitKey]) {
+                    totalScore += habitsData[habitKey].score;
+                    totalEntries++;
+                }
+            });
+            
+            const averageScore = totalEntries > 0 ? (totalScore / totalEntries).toFixed(1) : 0;
             document.getElementById('averageScore').textContent = averageScore;
+            
+            // Calculate consistency (based on students who have saved data)
+            const consistency = classStudentsArray.length > 0 ? Math.round((activeToday / classStudentsArray.length) * 100) : 0;
             document.getElementById('consistency').textContent = `${consistency}%`;
-
-            updateStudentsTable(students, habits, todayString);
-            updateLeaderboard(students, habits, startOfWeek);
-            updateClassChart(habits, students.length, today);
+            
+            // Save updated studentsData
+            localStorage.setItem(STUDENTS_KEY, JSON.stringify(studentsData));
+            
+            loadStudentsTable();
+            loadLeaderboard();
         }
 
-        function updateStudentsTable(students, allHabits, todayString) {
+        async function loadTeacherDataFromCloud() {
+            if (typeof window.supabaseClient === 'undefined') {
+                // Demo mode - just load from local storage
+                loadTeacherData();
+                return;
+            }
+            
+            try {
+                // Load students from Supabase
+                const { data: studentsData, error: studentsError } = await window.supabaseClient
+                    .from('students')
+                    .select('*')
+                    .eq('class', currentUser.class);
+                
+                if (studentsError) throw studentsError;
+                
+                // Load habits from Supabase
+                const { data: habitsData, error: habitsError } = await window.supabaseClient
+                    .from('habits')
+                    .select('*')
+                    .eq('class', currentUser.class);
+                
+                if (habitsError) throw habitsError;
+                
+                // Convert to localStorage format
+                const studentsObj = {};
+                studentsData.forEach(student => {
+                    const key = `${student.unique_code}-${student.name}-${student.class}`;
+                    studentsObj[key] = {
+                        name: student.name,
+                        class: student.class,
+                        uniqueCode: student.unique_code,
+                        medals: student.medals || [],
+                        createdAt: student.created_at,
+                        synced: true
+                    };
+                });
+                
+                const habitsObj = {};
+                habitsData.forEach(habit => {
+                    const key = `${habit.student_code}-${habit.student}-${habit.class}-${habit.date}`;
+                    habitsObj[key] = {
+                        studentCode: habit.student_code,
+                        student: habit.student,
+                        class: habit.class,
+                        date: habit.date,
+                        habits: habit.habits,
+                        details: habit.details || {},
+                        notes: habit.notes,
+                        score: habit.score,
+                        createdAt: habit.created_at,
+                        synced: true
+                    };
+                });
+                
+                // Update local storage
+                localStorage.setItem(STUDENTS_KEY, JSON.stringify(studentsObj));
+                localStorage.setItem(HABITS_KEY, JSON.stringify(habitsObj));
+                
+                // Load the data
+                loadTeacherData();
+                
+                console.log('Teacher data loaded from Supabase successfully');
+                
+            } catch (error) {
+                console.error('Error loading teacher data from Supabase:', error);
+                // Fallback to local data
+                loadTeacherData();
+            }
+        }
+
+        async function refreshTeacherData() {
+            showNotification('Memuat ulang data... 🔄');
+            
+            // Force reload all data
+            await loadTeacherData();
+            
+            // Recreate chart
+            const existingChart = Chart.getChart('classChart');
+            if (existingChart) {
+                existingChart.destroy();
+            }
+            createClassChart();
+            
+            showNotification('Data berhasil dimuat ulang! ✅');
+        }
+
+        function loadStudentsTable() {
             const tbody = document.getElementById('studentsTableBody');
             tbody.innerHTML = '';
-
-            if (students.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="10" class="text-center p-8 text-gray-500">Belum ada siswa di kelas ini.</td></tr>`;
+            
+            const studentsData = JSON.parse(localStorage.getItem(STUDENTS_KEY)) || {};
+            const habitsData = JSON.parse(localStorage.getItem(HABITS_KEY)) || {};
+            
+            // Get only students from the same class who have actually saved data
+            const classStudents = new Set();
+            
+            Object.keys(habitsData).forEach(key => {
+                const data = habitsData[key];
+                if (data.class === currentUser.class) {
+                    const studentKey = `${data.studentCode}-${data.student}-${data.class}`;
+                    classStudents.add(studentKey);
+                }
+            });
+            
+            const today = new Date().toISOString().split('T')[0];
+            const classStudentsArray = Array.from(classStudents).sort();
+            
+            if (classStudentsArray.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="10" class="px-4 py-8 text-center text-gray-500">
+                            Belum ada siswa yang mengisi jurnal di kelas ${currentUser.class}
+                        </td>
+                    </tr>
+                `;
                 return;
             }
-
-            students.sort((a, b) => a.name.localeCompare(b.name));
-
-            students.forEach(student => {
-                const habitData = allHabits.find(h => h.studentId === student.id && h.date === todayString);
-                const score = habitData ? habitData.score : 0;
+            
+            classStudentsArray.forEach(studentKey => {
+                const student = studentsData[studentKey];
+                const habitKey = `${studentKey}-${today}`;
+                const habitData = habitsData[habitKey];
+                
                 const row = document.createElement('tr');
                 row.className = 'hover:bg-gray-50';
-
-                let habitCells = '';
+                
+                let score = 0;
+                
                 if (habitData) {
-                    habitCells = habitData.habits.map(h => `<td class="px-4 py-4 whitespace-nowrap text-sm text-center hidden md:table-cell">${h ? '✅' : '❌'}</td>`).join('');
-                } else {
-                    habitCells = `<td colspan="7" class="px-4 py-4 whitespace-nowrap text-sm text-center text-gray-400 hidden md:table-cell">Belum mengisi</td>`;
+                    score = habitData.score;
                 }
-
+                
+                const syncStatus = habitData?.synced ? '✅' : (habitData ? '⏳' : '❌');
+                
                 row.innerHTML = `
-                    <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${student.name}</td>
-                    <td class="px-4 py-4 whitespace-nowrap text-sm text-center font-bold ${score === 7 ? 'text-green-600' : score >= 5 ? 'text-yellow-600' : 'text-red-600'}">${score}/${HABITS.length}</td>
-                    ${habitCells}
+                    <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        ${student?.name || 'Unknown'}
+                        <div class="text-xs">${syncStatus}</div>
+                    </td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-center">${habitData?.habits[0] ? '✅' : '❌'}</td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-center">${habitData?.habits[1] ? '✅' : '❌'}</td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-center">${habitData?.habits[2] ? '✅' : '❌'}</td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-center">${habitData?.habits[3] ? '✅' : '❌'}</td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-center">${habitData?.habits[4] ? '✅' : '❌'}</td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-center">${habitData?.habits[5] ? '✅' : '❌'}</td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-center">${habitData?.habits[6] ? '✅' : '❌'}</td>
+                    <td class="px-4 py-4 whitespace-nowrap text-sm text-center font-bold ${score === 7 ? 'text-green-600' : score >= 5 ? 'text-yellow-600' : score >= 1 ? 'text-orange-600' : 'text-red-600'}">${score}/7</td>
                     <td class="px-4 py-4 whitespace-nowrap text-sm text-center">
-                        <button onclick="viewStudentDetail('${student.id}')" class="text-blue-600 hover:text-blue-900">Detail</button>
+                        <div class="flex justify-center gap-2">
+                            <button onclick="viewStudentDetail('${studentKey}')" class="text-blue-600 hover:text-blue-900 px-2 py-1 rounded">Detail</button>
+                            <button onclick="deleteStudent('${studentKey}')" class="text-red-600 hover:text-red-900 px-2 py-1 rounded hover:bg-red-50">Hapus</button>
+                        </div>
                     </td>
                 `;
+                
                 tbody.appendChild(row);
             });
         }
 
-        function updateLeaderboard(students, allHabits, startOfWeek) {
-            const leaderboardContainer = document.getElementById('leaderboard');
-            leaderboardContainer.innerHTML = '';
+        function loadLeaderboard() {
+            const leaderboard = document.getElementById('leaderboard');
+            leaderboard.innerHTML = '';
             
-            const studentScores = students.map(student => {
-                const weeklyHabits = allHabits.filter(h => h.studentId === student.id && new Date(h.date) >= startOfWeek);
-                const totalScore = weeklyHabits.reduce((sum, h) => sum + h.score, 0);
-                return { name: student.name, score: totalScore };
-            }).sort((a, b) => b.score - a.score);
-
+            const studentsData = JSON.parse(localStorage.getItem(STUDENTS_KEY)) || {};
+            const habitsData = JSON.parse(localStorage.getItem(HABITS_KEY)) || {};
+            
+            // Get only students from the same class who have actually saved data
+            const classStudents = new Set();
+            
+            Object.keys(habitsData).forEach(key => {
+                const data = habitsData[key];
+                if (data.class === currentUser.class) {
+                    const studentKey = `${data.studentCode}-${data.student}-${data.class}`;
+                    classStudents.add(studentKey);
+                }
+            });
+            
+            // Calculate weekly scores for each student
+            const weekStart = new Date();
+            weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+            
+            const studentScores = Array.from(classStudents).map(studentKey => {
+                const student = studentsData[studentKey];
+                let weeklyScore = 0;
+                let daysActive = 0;
+                
+                for (let i = 0; i < 7; i++) {
+                    const date = new Date(weekStart);
+                    date.setDate(date.getDate() + i);
+                    const dateString = date.toISOString().split('T')[0];
+                    const habitKey = `${studentKey}-${dateString}`;
+                    
+                    if (habitsData[habitKey]) {
+                        weeklyScore += habitsData[habitKey].score;
+                        daysActive++;
+                    }
+                }
+                
+                return {
+                    name: student?.name || 'Unknown',
+                    score: weeklyScore,
+                    average: daysActive > 0 ? (weeklyScore / daysActive).toFixed(1) : 0,
+                    daysActive: daysActive
+                };
+            }).filter(student => student.daysActive > 0).sort((a, b) => b.score - a.score);
+            
             if (studentScores.length === 0) {
-                 leaderboardContainer.innerHTML = '<p class="text-gray-500 text-center py-4">Belum ada data untuk ditampilkan.</p>';
-                 return;
+                leaderboard.innerHTML = '<p class="text-gray-500 text-center py-4">Belum ada data siswa yang mengisi jurnal.</p>';
+                return;
             }
-
+            
             studentScores.forEach((student, index) => {
                 const position = index + 1;
-                const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : `<b>${position}</b>`;
+                const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : position === 3 ? '🥉' : '🏅';
+                
                 const item = document.createElement('div');
-                item.className = 'flex justify-between items-center p-3 mb-2 rounded-lg ' + (position <= 3 ? 'bg-yellow-50' : 'bg-gray-50');
+                item.className = 'flex justify-between items-center p-3 bg-gray-50 rounded-lg mb-2';
                 item.innerHTML = `
                     <div class="flex items-center">
-                        <span class="text-2xl mr-3 w-8 text-center">${medal}</span>
-                        <div class="font-semibold">${student.name}</div>
+                        <span class="text-2xl mr-3">${medal}</span>
+                        <div>
+                            <div class="font-semibold">${student.name}</div>
+                            <div class="text-sm text-gray-600">${student.daysActive} hari aktif</div>
+                        </div>
                     </div>
-                    <div class="font-bold text-lg text-yellow-600">${student.score} Poin</div>
+                    <div class="text-right">
+                        <div class="font-bold text-lg">${student.score}</div>
+                        <div class="text-sm text-gray-600">Rata-rata: ${student.average}</div>
+                    </div>
                 `;
-                leaderboardContainer.appendChild(item);
+                leaderboard.appendChild(item);
             });
         }
 
-        function updateClassChart(allHabits, studentCount, today) {
+        function createClassChart() {
             const ctx = document.getElementById('classChart').getContext('2d');
-            const labels = [];
-            const dataPoints = [];
-
+            
+            // Get data for the last 7 days
+            const dates = [];
+            const scores = [];
+            
+            const studentsData = JSON.parse(localStorage.getItem(STUDENTS_KEY)) || {};
+            const habitsData = JSON.parse(localStorage.getItem(HABITS_KEY)) || {};
+            
             for (let i = 6; i >= 0; i--) {
-                const date = new Date(today);
-                date.setDate(today.getDate() - i);
+                const date = new Date();
+                date.setDate(date.getDate() - i);
                 const dateString = date.toISOString().split('T')[0];
-                labels.push(date.toLocaleDateString('id-ID', {day: '2-digit', month: 'short'}));
-
-                const habitsOnDate = allHabits.filter(h => h.date === dateString);
-                const totalScore = habitsOnDate.reduce((sum, h) => sum + h.score, 0);
+                const displayDate = date.toLocaleDateString('id-ID', { month: 'short', day: 'numeric' });
                 
-                const averageScore = studentCount > 0 ? totalScore / studentCount : 0;
-                dataPoints.push(averageScore.toFixed(2));
+                dates.push(displayDate);
+                
+                // Get all students from the same class
+                const classStudents = new Set();
+                
+                Object.keys(studentsData).forEach(key => {
+                    if (studentsData[key].class === currentUser.class) {
+                        classStudents.add(key);
+                    }
+                });
+                
+                Object.keys(habitsData).forEach(key => {
+                    const data = habitsData[key];
+                    if (data.class === currentUser.class && data.date === dateString) {
+                        const studentKey = `${data.studentCode}-${data.student}-${data.class}`;
+                        classStudents.add(studentKey);
+                    }
+                });
+                
+                let totalScore = 0;
+                let activeStudents = 0;
+                
+                Array.from(classStudents).forEach(studentKey => {
+                    const habitKey = `${studentKey}-${dateString}`;
+                    if (habitsData[habitKey]) {
+                        totalScore += habitsData[habitKey].score;
+                        activeStudents++;
+                    }
+                });
+                
+                const averageScore = activeStudents > 0 ? totalScore / activeStudents : 0;
+                scores.push(averageScore);
             }
-
-            if (classChart) {
-                classChart.destroy();
-            }
-
-            classChart = new Chart(ctx, {
+            
+            new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: labels,
+                    labels: dates,
                     datasets: [{
-                        label: 'Rata-rata Skor Kepatuhan Kelas',
-                        data: dataPoints,
+                        label: 'Rata-rata Skor Kelas',
+                        data: scores,
                         borderColor: 'rgb(34, 197, 94)',
                         backgroundColor: 'rgba(34, 197, 94, 0.1)',
                         tension: 0.4,
@@ -940,117 +1921,291 @@
                 },
                 options: {
                     responsive: true,
-                    scales: { y: { beginAtZero: true, max: HABITS.length } }
-                }
-            });
-        }
-
-        async function viewStudentDetail(studentId) {
-            const modal = document.getElementById('detailModal');
-            const modalTitle = document.getElementById('modalTitle');
-            const modalBody = document.getElementById('modalBody');
-
-            const { data: student, error } = await window.supabase.from('students').select('*').eq('id', studentId).single();
-
-            if (error) {
-                showNotification("Data siswa tidak ditemukan.", true);
-                return;
-            }
-            
-            modalTitle.textContent = `Detail Jurnal: ${student.name}`;
-
-            const today = new Date();
-            const sevenDaysAgo = new Date(today);
-            sevenDaysAgo.setDate(today.getDate() - 6);
-            const sevenDaysAgoString = sevenDaysAgo.toISOString().split('T')[0];
-
-            let bodyHtml = '<p class="text-center">Memuat data...</p>';
-            modalBody.innerHTML = bodyHtml;
-            modal.classList.remove('hidden');
-
-            const { data: historyData, error: historyError } = await window.supabase
-                .from('habits')
-                .select('*')
-                .eq('studentId', studentId)
-                .gte('date', sevenDaysAgoString)
-                .order('date', { ascending: false });
-
-            if (historyError) {
-                modalBody.innerHTML = '<p class="text-red-500 text-center">Gagal memuat detail jurnal.</p>';
-                return;
-            }
-            
-            bodyHtml = '';
-            // Buat map untuk pencarian cepat
-            const historyMap = new Map(historyData.map(h => [h.date, h]));
-
-            for (let i = 0; i < 7; i++) {
-                const date = new Date(today);
-                date.setDate(today.getDate() - i);
-                const dateString = date.toISOString().split('T')[0];
-                
-                bodyHtml += `<div class="bg-gray-100 p-4 rounded-lg">`;
-                bodyHtml += `<h4 class="font-bold mb-2">${date.toLocaleDateString('id-ID', {weekday: 'long', day: 'numeric', month: 'long'})}</h4>`;
-
-                if (historyMap.has(dateString)) {
-                    const data = historyMap.get(dateString);
-                    bodyHtml += `<ul class="list-disc list-inside space-y-1">`;
-                    HABITS.forEach((habit, index) => {
-                        bodyHtml += `<li>${data.habits[index] ? '✅' : '❌'} ${habit.name}</li>`;
-                    });
-                    bodyHtml += `</ul>`;
-                    if (data.notes) {
-                         bodyHtml += `<p class="mt-2 pt-2 border-t border-gray-200 italic"><b>Catatan:</b> "${data.notes}"</p>`;
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 7,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
                     }
-                } else {
-                    bodyHtml += `<p class="text-gray-500">Tidak ada data untuk tanggal ini.</p>`;
                 }
-                bodyHtml += `</div>`;
-            }
-
-            modalBody.innerHTML = bodyHtml || '<p class="text-center">Tidak ada data jurnal dalam 7 hari terakhir.</p>';
+            });
         }
-        
-        async function exportToExcel() {
-            showNotification('Mempersiapkan file Excel...');
-            const { data: students, error: studentsError } = await window.supabase
-                .from('students')
-                .select('id, name')
-                .eq('class', currentUser.class);
 
-            if (studentsError) return showNotification('Gagal mengambil data siswa untuk ekspor.', true);
-
-            const { data: habits, error: habitsError } = await window.supabase
-                .from('habits')
-                .select('*')
-                .eq('class', currentUser.class)
-                .order('date', { ascending: false });
-
-            if (habitsError) return showNotification('Gagal mengambil data jurnal untuk ekspor.', true);
+        function viewStudentDetail(studentKey) {
+            const studentsData = JSON.parse(localStorage.getItem(STUDENTS_KEY)) || {};
+            const habitsData = JSON.parse(localStorage.getItem(HABITS_KEY)) || {};
             
-            const excelData = [];
-            const habitNames = HABITS.map(h => h.name);
-            excelData.push(['Nama Siswa', 'Kelas', 'Tanggal', ...habitNames, 'Total Skor', 'Catatan']);
+            const student = studentsData[studentKey];
+            const today = new Date().toISOString().split('T')[0];
+            const habitKey = `${studentKey}-${today}`;
+            const habitData = habitsData[habitKey];
             
-            habits.forEach(habitData => {
-                const row = [
-                    habitData.studentName,
-                    habitData.class,
-                    new Date(habitData.date + 'T00:00:00').toLocaleDateString('id-ID'),
-                    ...habitData.habits.map(h => h ? 'Ya' : 'Tidak'),
-                    habitData.score,
-                    habitData.notes || '',
-                ];
-                excelData.push(row);
+            let detailText = `Detail untuk ${student?.name || 'Unknown'}:\n`;
+            
+            if (habitData) {
+                detailText += `Tanggal: ${new Date(habitData.date).toLocaleDateString('id-ID')}\n`;
+                detailText += `Skor: ${habitData.score}/7\n`;
+                detailText += `Status Sync: ${habitData.synced ? 'Tersinkronisasi' : 'Menunggu sinkronisasi'}\n\n`;
+                
+                const habitNames = ['Bangun Pagi', 'Beribadah', 'Berolahraga', 'Makan Sehat', 'Gemar Belajar', 'Bermasyarakat', 'Tidur Cepat'];
+                habitData.habits.forEach((habit, index) => {
+                    detailText += `${habitNames[index]}: ${habit ? '✅' : '❌'}\n`;
+                });
+                
+                if (habitData.details) {
+                    detailText += `\nDetail:\n`;
+                    if (habitData.details.wakeTime) detailText += `Jam bangun: ${habitData.details.wakeTime}\n`;
+                    if (habitData.details.prayers?.length) detailText += `Shalat: ${habitData.details.prayers.join(', ')}\n`;
+                    if (habitData.details.exerciseType) detailText += `Olahraga: ${habitData.details.exerciseType}\n`;
+                    if (habitData.details.healthyFood) detailText += `Makanan sehat: ${habitData.details.healthyFood}\n`;
+                    if (habitData.details.studySubject) detailText += `Belajar: ${habitData.details.studySubject}\n`;
+                    if (habitData.details.socialActivity) detailText += `Kegiatan sosial: ${habitData.details.socialActivity}\n`;
+                    if (habitData.details.sleepTime) detailText += `Jam tidur: ${habitData.details.sleepTime}\n`;
+                }
+                
+                if (habitData.notes) {
+                    detailText += `\nCatatan: ${habitData.notes}`;
+                }
+            } else {
+                detailText += 'Belum mengisi jurnal hari ini.';
+            }
+            
+            alert(detailText);
+        }
+
+        function deleteStudent(studentKey) {
+            const studentsData = JSON.parse(localStorage.getItem(STUDENTS_KEY)) || {};
+            const student = studentsData[studentKey];
+            
+            if (!student) {
+                showNotification('Data siswa tidak ditemukan!');
+                return;
+            }
+            
+            const confirmDelete = confirm(
+                `⚠️ PERINGATAN!\n\n` +
+                `Anda akan menghapus data siswa:\n` +
+                `Nama: ${student.name}\n` +
+                `Kelas: ${student.class}\n\n` +
+                `Tindakan ini akan menghapus:\n` +
+                `• Data profil siswa\n` +
+                `• Semua riwayat jurnal harian\n` +
+                `• Semua pencapaian dan medali\n\n` +
+                `Data yang sudah dihapus TIDAK DAPAT dikembalikan!\n\n` +
+                `Apakah Anda yakin ingin melanjutkan?`
+            );
+            
+            if (!confirmDelete) {
+                return;
+            }
+            
+            // Double confirmation for safety
+            const finalConfirm = confirm(
+                `🚨 KONFIRMASI TERAKHIR!\n\n` +
+                `Ketik "HAPUS" untuk mengonfirmasi penghapusan data ${student.name}.\n\n` +
+                `Apakah Anda benar-benar yakin?`
+            );
+            
+            if (!finalConfirm) {
+                return;
+            }
+            
+            try {
+                // Delete student data
+                delete studentsData[studentKey];
+                localStorage.setItem(STUDENTS_KEY, JSON.stringify(studentsData));
+                
+                // Delete all habit entries for this student
+                const habitsData = JSON.parse(localStorage.getItem(HABITS_KEY)) || {};
+                const keysToDelete = Object.keys(habitsData).filter(key => key.startsWith(studentKey));
+                
+                keysToDelete.forEach(key => {
+                    delete habitsData[key];
+                });
+                
+                localStorage.setItem(HABITS_KEY, JSON.stringify(habitsData));
+                
+                // Show success message
+                showNotification(`Data siswa ${student.name} berhasil dihapus! 🗑️`);
+                
+                // Refresh teacher dashboard
+                loadTeacherData();
+                loadStudentsTable();
+                loadLeaderboard();
+                
+                // Recreate chart
+                const existingChart = Chart.getChart('classChart');
+                if (existingChart) {
+                    existingChart.destroy();
+                }
+                createClassChart();
+                
+            } catch (error) {
+                console.error('Error deleting student:', error);
+                showNotification('Terjadi kesalahan saat menghapus data siswa!');
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            userRole = null;
+            
+            document.getElementById('studentDashboard').classList.add('hidden');
+            document.getElementById('teacherDashboard').classList.add('hidden');
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('homepageDashboard').classList.remove('hidden');
+            document.getElementById('habitsDisplay').classList.remove('hidden');
+            
+            // Refresh homepage data
+            loadHomepageDashboard();
+        }
+
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            const notificationText = document.getElementById('notificationText');
+            
+            notificationText.textContent = message;
+            notification.classList.remove('hidden');
+            
+            setTimeout(() => {
+                notification.classList.add('hidden');
+            }, 4000);
+        }
+
+        function closeConnectionModal() {
+            document.getElementById('connectionModal').classList.add('hidden');
+        }
+
+        // Auto-sync every 5 minutes when online
+        setInterval(() => {
+            if (isOnline && !syncInProgress) {
+                syncData();
+            }
+        }, 300000);
+
+        // Check connection status every 30 seconds
+        setInterval(() => {
+            const wasOnline = isOnline;
+            isOnline = navigator.onLine;
+            
+            if (wasOnline !== isOnline) {
+                updateSyncIndicator();
+                if (isOnline) {
+                    showNotification('Koneksi kembali! Menyinkronkan data... 🌐');
+                    syncPendingData();
+                } else {
+                    showNotification('Koneksi terputus. Mode offline aktif. 📱');
+                }
+            }
+        }, 30000);
+
+        // Export functions
+        function exportToExcel() {
+            const studentsData = JSON.parse(localStorage.getItem(STUDENTS_KEY)) || {};
+            const habitsData = JSON.parse(localStorage.getItem(HABITS_KEY)) || {};
+            
+            // Get all students from the same class
+            const classStudents = new Set();
+            
+            Object.keys(studentsData).forEach(key => {
+                if (studentsData[key].class === currentUser.class) {
+                    classStudents.add(key);
+                }
             });
             
+            Object.keys(habitsData).forEach(key => {
+                const data = habitsData[key];
+                if (data.class === currentUser.class) {
+                    const studentKey = `${data.studentCode}-${data.student}-${data.class}`;
+                    classStudents.add(studentKey);
+                }
+            });
+            
+            // Prepare data for Excel
+            const excelData = [];
+            const habitNames = ['Bangun Pagi', 'Beribadah', 'Berolahraga', 'Makan Sehat', 'Gemar Belajar', 'Bermasyarakat', 'Tidur Cepat'];
+            
+            // Header row
+            excelData.push(['Nama Siswa', 'Kelas', 'Tanggal', ...habitNames, 'Total Skor', 'Catatan', 'Status Sync']);
+            
+            // Get data for the last 30 days
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            
+            Array.from(classStudents).sort().forEach(studentKey => {
+                const student = studentsData[studentKey];
+                
+                // Get all habit entries for this student
+                const studentHabits = Object.keys(habitsData)
+                    .filter(key => key.startsWith(studentKey))
+                    .filter(key => {
+                        const date = new Date(habitsData[key].date);
+                        return date >= thirtyDaysAgo;
+                    })
+                    .sort((a, b) => habitsData[b].date.localeCompare(habitsData[a].date));
+                
+                if (studentHabits.length === 0) {
+                    // Add empty row for students with no data
+                    excelData.push([
+                        student?.name || 'Unknown',
+                        currentUser.class,
+                        'Tidak ada data',
+                        '', '', '', '', '', '', '',
+                        '0',
+                        'Belum mengisi jurnal',
+                        'N/A'
+                    ]);
+                } else {
+                    studentHabits.forEach(habitKey => {
+                        const habitData = habitsData[habitKey];
+                        const row = [
+                            student?.name || 'Unknown',
+                            currentUser.class,
+                            new Date(habitData.date).toLocaleDateString('id-ID'),
+                            ...habitData.habits.map(h => h ? 'Ya' : 'Tidak'),
+                            habitData.score,
+                            habitData.notes || '',
+                            habitData.synced ? 'Tersinkronisasi' : 'Menunggu'
+                        ];
+                        excelData.push(row);
+                    });
+                }
+            });
+            
+            // Create workbook
             const wb = XLSX.utils.book_new();
             const ws = XLSX.utils.aoa_to_sheet(excelData);
             
-            ws['!cols'] = [ { wch: 20 }, { wch: 8 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 30 } ];
+            // Set column widths
+            const colWidths = [
+                { wch: 20 }, // Nama Siswa
+                { wch: 8 },  // Kelas
+                { wch: 12 }, // Tanggal
+                { wch: 12 }, // Bangun Pagi
+                { wch: 12 }, // Beribadah
+                { wch: 12 }, // Berolahraga
+                { wch: 12 }, // Makan Sehat
+                { wch: 12 }, // Gemar Belajar
+                { wch: 12 }, // Bermasyarakat
+                { wch: 12 }, // Tidur Cepat
+                { wch: 10 }, // Total Skor
+                { wch: 30 }, // Catatan
+                { wch: 15 }  // Status Sync
+            ];
+            ws['!cols'] = colWidths;
             
             XLSX.utils.book_append_sheet(wb, ws, `Kelas ${currentUser.class}`);
             
+            // Generate filename with current date
             const today = new Date().toISOString().split('T')[0];
             const filename = `Jurnal_7_Kebiasaan_Kelas_${currentUser.class}_${today}.xlsx`;
             
@@ -1058,87 +2213,119 @@
             showNotification('File Excel berhasil diunduh! 📊');
         }
 
-        async function exportToPDF() {
-            showNotification('Mempersiapkan file PDF...');
+        function exportToPDF() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
-
-            const { data: students, error: studentsError } = await window.supabase
-                .from('students')
-                .select('*')
-                .eq('class', currentUser.class);
-            if (studentsError) return showNotification('Gagal mengambil data siswa untuk ekspor.', true);
-
-            const today = new Date().toISOString().split('T')[0];
-            const { data: habits, error: habitsError } = await window.supabase
-                .from('habits')
-                .select('*')
-                .eq('class', currentUser.class)
-                .eq('date', today);
-            if (habitsError) return showNotification('Gagal mengambil data jurnal untuk ekspor.', true);
-
+            
+            const studentsData = JSON.parse(localStorage.getItem(STUDENTS_KEY)) || {};
+            const habitsData = JSON.parse(localStorage.getItem(HABITS_KEY)) || {};
+            
+            // Get all students from the same class
+            const classStudents = new Set();
+            
+            Object.keys(studentsData).forEach(key => {
+                if (studentsData[key].class === currentUser.class) {
+                    classStudents.add(key);
+                }
+            });
+            
+            Object.keys(habitsData).forEach(key => {
+                const data = habitsData[key];
+                if (data.class === currentUser.class) {
+                    const studentKey = `${data.studentCode}-${data.student}-${data.class}`;
+                    classStudents.add(studentKey);
+                }
+            });
+            
+            // Title
             doc.setFontSize(16);
-            doc.text('Laporan Jurnal 7 Kebiasaan Anak Hebat', 20, 20);
+            doc.text('Laporan Jurnal 7 Kebiasaan Anak Indonesia Hebat', 20, 20);
             
             doc.setFontSize(12);
             doc.text(`Kelas: ${currentUser.class}`, 20, 30);
             doc.text(`Guru: ${currentUser.name}`, 20, 40);
             doc.text(`Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}`, 20, 50);
             
-            const tableData = [];
-            const habitNames = ['BP', 'IB', 'OR', 'MS', 'BL', 'BM', 'TC'];
+            // Statistics
+            const totalStudents = Array.from(classStudents).length;
+            const today = new Date().toISOString().split('T')[0];
+            const activeToday = Array.from(classStudents).filter(studentKey => {
+                const habitKey = `${studentKey}-${today}`;
+                return habitsData[habitKey];
+            }).length;
             
-            students.sort((a,b) => a.name.localeCompare(b.name)).forEach(student => {
-                const habitData = habits.find(h => h.studentId === student.id);
-                const score = habitData ? habitData.score : 0;
-                const habitChecks = habitData ? habitData.habits.map(h => h ? '✅' : '❌') : Array(7).fill('❌');
-                tableData.push([ student.name, ...habitChecks, `${score}/7` ]);
+            let totalScore = 0;
+            let totalEntries = 0;
+            
+            Array.from(classStudents).forEach(studentKey => {
+                const habitKey = `${studentKey}-${today}`;
+                if (habitsData[habitKey]) {
+                    totalScore += habitsData[habitKey].score;
+                    totalEntries++;
+                }
             });
             
+            const averageScore = totalEntries > 0 ? (totalScore / totalEntries).toFixed(1) : 0;
+            const consistency = totalStudents > 0 ? Math.round((activeToday / totalStudents) * 100) : 0;
+            
+            doc.text(`Total Siswa: ${totalStudents}`, 20, 65);
+            doc.text(`Aktif Hari Ini: ${activeToday}`, 20, 75);
+            doc.text(`Rata-rata Skor: ${averageScore}`, 20, 85);
+            doc.text(`Konsistensi: ${consistency}%`, 20, 95);
+            
+            // Prepare table data
+            const tableData = [];
+            const habitNames = ['BP', 'IB', 'OR', 'MS', 'BL', 'BM', 'TC']; // Abbreviated for PDF
+            
+            Array.from(classStudents).sort().forEach(studentKey => {
+                const student = studentsData[studentKey];
+                const habitKey = `${studentKey}-${today}`;
+                const habitData = habitsData[habitKey];
+                
+                let score = 0;
+                const habits = ['❌', '❌', '❌', '❌', '❌', '❌', '❌'];
+                
+                if (habitData) {
+                    score = habitData.score;
+                    habitData.habits.forEach((habit, index) => {
+                        habits[index] = habit ? '✅' : '❌';
+                    });
+                }
+                
+                tableData.push([
+                    student?.name || 'Unknown',
+                    ...habits,
+                    `${score}/7`
+                ]);
+            });
+            
+            // Add table
             doc.autoTable({
                 head: [['Nama Siswa', ...habitNames, 'Skor']],
                 body: tableData,
-                startY: 60,
+                startY: 110,
                 styles: { fontSize: 8 },
                 headStyles: { fillColor: [34, 197, 94] },
-                columnStyles: { 0: { cellWidth: 40 }, 8: { cellWidth: 20 } }
+                columnStyles: {
+                    0: { cellWidth: 40 }, // Nama Siswa
+                    8: { cellWidth: 20 }  // Skor
+                }
             });
             
-            const finalY = doc.lastAutoTable.finalY + 10;
+            // Add legend
+            const finalY = doc.lastAutoTable.finalY + 20;
             doc.setFontSize(10);
             doc.text('Keterangan:', 20, finalY);
-            doc.text('BP: Bangun Pagi, IB: Beribadah, OR: Berolahraga, MS: Makan Sehat', 20, finalY + 7);
-            doc.text('BL: Gemar Belajar, BM: Bermasyarakat, TC: Tidur Cepat', 20, finalY + 14);
+            doc.text('BP: Bangun Pagi, IB: Beribadah, OR: Berolahraga, MS: Makan Sehat', 20, finalY + 10);
+            doc.text('BL: Gemar Belajar, BM: Bermasyarakat, TC: Tidur Cepat', 20, finalY + 20);
             
+            // Generate filename with current date
             const todayStr = new Date().toISOString().split('T')[0];
-            const filename = `Laporan_Jurnal_Harian_Kelas_${currentUser.class}_${todayStr}.pdf`;
+            const filename = `Laporan_Jurnal_7_Kebiasaan_Kelas_${currentUser.class}_${todayStr}.pdf`;
             
             doc.save(filename);
             showNotification('File PDF berhasil diunduh! 📄');
         }
-
-        // --- FUNGSI UTILITAS ---
-        function getStartOfWeek(d) {
-            d = new Date(d);
-            const day = d.getDay();
-            const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Sesuaikan jika hari Minggu
-            return new Date(new Date(d.setDate(diff)).setHours(0, 0, 0, 0));
-        }
-
-        // --- Membuat fungsi dapat diakses secara global ---
-        window.showStudentLogin = showStudentLogin;
-        window.showTeacherLogin = showTeacherLogin;
-        window.backToMain = backToMain;
-        window.studentLogin = studentLogin;
-        window.teacherLogin = teacherLogin;
-        window.logout = logout;
-        window.saveHabits = saveHabits;
-        window.viewStudentDetail = viewStudentDetail;
-        window.closeModal = closeModal;
-        window.copyCode = copyCode;
-        window.exportToExcel = exportToExcel;
-        window.exportToPDF = exportToPDF;
-
     </script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96d46f19244ffd64',t:'MTc1NDg4MDcxNi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
